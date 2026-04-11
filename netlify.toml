@@ -1,6 +1,9 @@
 [build]
-command = "npx next build"
-publish = ".next"
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_APP_URL,NEXT_PUBLIC_MP_PUBLIC_KEY"
 
 [[plugins]]
-package = "@netlify/plugin-nextjs"
+  package = "@netlify/plugin-nextjs"
