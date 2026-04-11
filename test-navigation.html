@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Navigation</title>
+</head>
+<body>
+    <h1>Test Links</h1>
+    <ul>
+        <li><a href="/productos/lectura-esencial">Lectura Esencial</a></li>
+        <li><a href="/productos/consulta-evolutiva">Consulta Evolutiva</a></li>
+        <li><a href="/productos/especial-parejas">Especial Parejas</a></li>
+    </ul>
+
+    <script>
+        document.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                console.log('Link clicked:', e.target.href);
+                console.log('Default prevented:', e.defaultPrevented);
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+1. Descripción del Proyecto
+Nombre: Astral Evolution.
+
+Tema: Plataforma mística y evolutiva que genera reportes astrológicos personalizados (Cartas Natales, Revolución Solar, Sinastría) utilizando Inteligencia Artificial.
+
+Objetivo: Ofrecer una experiencia de usuario moderna y minimalista donde, a través de sus datos de nacimiento, el usuario reciba un análisis profundo y evolutivo generado por el modelo Gemini 1.5 Flash.
+
+2. Stack Tecnológico (Lo que ya está construido)
+Framework: Next.js con App Router.
+
+Frontend: Tailwind CSS con una estética mística (tonos violetas, oscuros y efectos espaciales).
+
+Base de Datos: Supabase (PostgreSQL).
+
+Motor de IA: Google Gemini API (vía REST fetch en el servidor).
+
+Hosting: Netlify (actualmente en modo "Disabled" por mantenimiento).
+
+3. Estado Actual y Logros
+Interfaz: El formulario de captura de datos y la landing page están terminados.
+
+Infraestructura de IA: Ya contamos con una API Key de Google Cloud con facturación activa (Nivel 1 Pospago). La conexión técnica básica entre el servidor y Google ya fue testeada.
+
+Base de Datos: Existen tablas para usuarios, pero hay conflictos de permisos (RLS) o de estructura que impiden el flujo normal.
+
+Pagos: Se intentó integrar Paddle, pero el dominio fue rechazado por la categoría del negocio. El sistema debe migrar a Mercado Pago o mantenerse en modo prueba/manual por ahora.
+
+4. Desafíos Técnicos a Solucionar (Lo que necesito que hagas)
+Depuración del Error de Gemini: El sistema reconoce la API Key, pero devuelve un Error de Gemini al intentar generar el reporte. Necesito revisar el formato del JSON que se envía por fetch y la estructura de la respuesta.
+
+Aislamiento de Lógica: Actualmente el código intenta guardar en la base de datos y generar el reporte al mismo tiempo. Necesito separar estas acciones para que, si falla la base de datos, el usuario igual pueda ver su reporte (o viceversa).
+
+Configuración de Supabase: Corregir el error de "table public.users not found" o problemas de políticas RLS para que los reportes generados se guarden correctamente vinculados a un ID de usuario.
+
+Flujo de Usuario: Optimizar la ruta /test-report para que sea el entorno de pruebas definitivo antes de volver a publicar la web en Netlify.
