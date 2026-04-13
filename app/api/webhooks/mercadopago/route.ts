@@ -50,9 +50,7 @@ export async function POST(request: NextRequest) {
 
 async function processPayment(paymentId: string) {
   console.log('[webhook-mp] Procesando pago:', paymentId);
-  console.log('[webhook-mp] preference_id:', payment.preference_id);
-  console.log('[webhook-mp] order:', JSON.stringify(payment.order));
-  console.log('[webhook-mp] external_reference:', payment.external_reference);
+
   // 1. Consultar el pago en MP
   const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
     headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
@@ -65,6 +63,9 @@ async function processPayment(paymentId: string) {
 
   const payment = await mpRes.json();
   console.log('[webhook-mp] Estado del pago:', payment.status);
+  console.log('[webhook-mp] preference_id:', payment.preference_id);
+  console.log('[webhook-mp] order:', JSON.stringify(payment.order));
+  console.log('[webhook-mp] external_reference:', payment.external_reference);
 
   if (payment.status !== 'approved') {
     console.log('[webhook-mp] Pago no aprobado, ignorando');
