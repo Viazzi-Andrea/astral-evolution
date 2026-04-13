@@ -127,7 +127,7 @@ async function processPayment(paymentId: string) {
 }
 
 async function generateReport(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   transactionId: string,
   productSlug: string,
   birthData: Record<string, string>
