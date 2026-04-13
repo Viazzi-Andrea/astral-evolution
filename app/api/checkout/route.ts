@@ -23,10 +23,11 @@ const PRODUCT_NAMES: Record<string, string> = {
   'especial-parejas':   'Especial Parejas — Astral Evolution',
 };
 
+// IDs reales de la tabla products en Supabase
 const PRODUCT_IDS: Record<string, string> = {
-  'lectura-esencial':   'e53d85c4-3599-4a82-80d8-5d313fc3c916',
-  'consulta-evolutiva': 'e1c9e6a0-2e6a-41b4-a741-c413b6c955f8',
-  'especial-parejas':   '930bfe28-0c0f-433e-84bd-3cc57827aafa',
+  'lectura-esencial':   '5ae9b326-62fb-4833-b12c-acb0a34a37e3',
+  'consulta-evolutiva': '585f34fd-a14e-45f1-9e76-cb5811c31373',
+  'especial-parejas':   'f593bc9f-e3a5-4e13-b8ba-924ac92edc75',
 };
 
 export async function POST(request: NextRequest) {
@@ -78,6 +79,7 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (userError || !newUser) {
+        console.error('❌ Error creando usuario:', userError);
         return NextResponse.json(
           { error: 'No se pudo registrar el usuario.', details: userError?.message },
           { status: 500 }
@@ -104,6 +106,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (birthError || !birthRecord) {
+      console.error('❌ Error guardando birth_data:', birthError);
       return NextResponse.json(
         { error: 'No se pudieron guardar los datos de nacimiento.', details: birthError?.message },
         { status: 500 }
@@ -166,6 +169,7 @@ export async function POST(request: NextRequest) {
 
     if (!mpResponse.ok) {
       const errorBody = await mpResponse.json().catch(() => ({}));
+      console.error('❌ Error MP:', mpResponse.status, JSON.stringify(errorBody));
       return NextResponse.json(
         { error: 'No se pudo crear el pago.', details: errorBody?.message },
         { status: 500 }
@@ -177,25 +181,24 @@ export async function POST(request: NextRequest) {
 
     console.log('💳 Preferencia MP creada:', mpData.id);
 
-    // ── 4. Crear transacción en Supabase con el preference_id ─────────────────
+    // ── 4. Crear transacción en Supabase ──────────────────────────────────────
     const { data: transaction, error: txError } = await supabaseAdmin
       .from('transactions')
       .insert({
-        user_id:           userId,
-        product_id:        productId || null,
-        birth_data_id:     birthRecord.id,
-        mp_preference_id:  mpData.id,
-        amount:            unitPrice,
-        currency:          'UYU',
-        country_code:      countryCode,
-        status:            'pending',
+        user_id:          userId,
+        product_id:       productId,
+        birth_data_id:    birthRecord.id,
+        mp_preference_id: mpData.id,
+        amount:           unitPrice,
+        currency:         'UYU',
+        country_code:     countryCode,
+        status:           'pending',
       })
       .select('id')
       .single();
 
     if (txError) {
-      console.error('❌ Error creando transacción:', txError);
-      // No bloqueamos el flujo — igual redirigimos al checkout
+      console.error('❌ Error creando transacción:', txError.message);
     } else {
       console.log('✅ Transacción creada:', transaction?.id);
     }
