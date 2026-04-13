@@ -1,6 +1,5 @@
 /**
  * /api/checkout — Mercado Pago (PRODUCCIÓN)
- * Supabase client inicializado DENTRO de la función para evitar errores en build time
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -24,35 +23,38 @@ const PRODUCT_NAMES: Record<string, string> = {
   'especial-parejas':   'Especial Parejas — Astral Evolution',
 };
 
+const PRODUCT_IDS: Record<string, string> = {
+  'lectura-esencial':   'e53d85c4-3599-4a82-80d8-5d313fc3c916',
+  'consulta-evolutiva': 'e1c9e6a0-2e6a-41b4-a741-c413b6c955f8',
+  'especial-parejas':   '930bfe28-0c0f-433e-84bd-3cc57827aafa',
+};
+
 export async function POST(request: NextRequest) {
   try {
-    // Supabase inicializado dentro de la función (no a nivel módulo)
-    // Esto evita el error "Invalid supabaseUrl" durante el build
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
     const body = await request.json();
-    const { productSlug, productId, birthData, countryCode = 'UY' } = body;
+    const { productSlug, birthData, countryCode = 'UY' } = body;
 
     if (!productSlug || !birthData?.email || !birthData?.name) {
       return NextResponse.json(
-        { error: 'Faltan datos requeridos: productSlug, email y nombre son obligatorios.' },
+        { error: 'Faltan datos requeridos.' },
         { status: 400 }
       );
     }
 
     const accessToken = process.env.MP_ACCESS_TOKEN?.trim();
     if (!accessToken) {
-      console.error('❌ MP_ACCESS_TOKEN no configurado');
       return NextResponse.json(
-        { error: 'El sistema de pagos no está configurado. Contactá al administrador.' },
+        { error: 'El sistema de pagos no está configurado.' },
         { status: 500 }
       );
     }
 
-    // ── Guardar / recuperar usuario ───────────────────────────────────────────
+    // ── 1. Guardar / recuperar usuario ────────────────────────────────────────
     let userId: string;
 
     const { data: existingUser } = await supabaseAdmin
@@ -63,7 +65,6 @@ export async function POST(request: NextRequest) {
 
     if (existingUser) {
       userId = existingUser.id;
-      console.log('👤 Usuario existente:', userId);
     } else {
       const { data: newUser, error: userError } = await supabaseAdmin
         .from('users')
@@ -77,17 +78,17 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (userError || !newUser) {
-        console.error('❌ Error creando usuario:', userError);
         return NextResponse.json(
           { error: 'No se pudo registrar el usuario.', details: userError?.message },
           { status: 500 }
         );
       }
       userId = newUser.id;
-      console.log('👤 Usuario creado:', userId);
     }
 
-    // ── Guardar datos de nacimiento ───────────────────────────────────────────
+    console.log('👤 Usuario:', userId);
+
+    // ── 2. Guardar datos de nacimiento ────────────────────────────────────────
     const { data: birthRecord, error: birthError } = await supabaseAdmin
       .from('birth_data')
       .insert({
@@ -103,26 +104,27 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (birthError || !birthRecord) {
-      console.error('❌ Error guardando birth_data:', birthError);
       return NextResponse.json(
         { error: 'No se pudieron guardar los datos de nacimiento.', details: birthError?.message },
         { status: 500 }
       );
     }
-    console.log('🌟 Birth data guardada:', birthRecord.id);
 
-    // ── Crear preferencia en Mercado Pago ─────────────────────────────────────
-    const appUrl       = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+    console.log('🌟 Birth data:', birthRecord.id);
+
+    // ── 3. Crear preferencia en Mercado Pago ──────────────────────────────────
+    const appUrl       = process.env.NEXT_PUBLIC_APP_URL ?? 'https://astralevolution.com';
     const isSandbox    = accessToken.startsWith('TEST-');
     const isLocalhost  = appUrl.includes('localhost');
     const unitPrice    = PRODUCT_PRICES[productSlug] ?? 10.50;
     const productTitle = PRODUCT_NAMES[productSlug] ?? 'Lectura Astrológica — Astral Evolution';
+    const productId    = PRODUCT_IDS[productSlug] ?? '';
 
     const preference: Record<string, unknown> = {
       items: [{
-        id:          productId ?? productSlug,
+        id:          productId,
         title:       productTitle,
-        description: `Reporte astrológico personalizado para ${birthData.name}`,
+        description: `Reporte astrológico para ${birthData.name}`,
         category_id: 'services',
         quantity:    1,
         currency_id: 'UYU',
@@ -134,7 +136,7 @@ export async function POST(request: NextRequest) {
       },
       metadata: {
         product_slug:  productSlug,
-        product_id:    productId ?? '',
+        product_id:    productId,
         user_id:       userId,
         birth_data_id: birthRecord.id,
         country_code:  countryCode,
@@ -153,8 +155,6 @@ export async function POST(request: NextRequest) {
       preference.auto_return = 'approved';
     }
 
-    console.log('💳 Creando preferencia MP:', productSlug, '| monto:', unitPrice, 'UYU');
-
     const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
@@ -166,12 +166,8 @@ export async function POST(request: NextRequest) {
 
     if (!mpResponse.ok) {
       const errorBody = await mpResponse.json().catch(() => ({}));
-      console.error('❌ Error Mercado Pago:', mpResponse.status, JSON.stringify(errorBody));
       return NextResponse.json(
-        {
-          error:   'No se pudo crear el pago. Por favor intentá de nuevo.',
-          details: errorBody?.message ?? mpResponse.statusText,
-        },
+        { error: 'No se pudo crear el pago.', details: errorBody?.message },
         { status: 500 }
       );
     }
@@ -179,13 +175,35 @@ export async function POST(request: NextRequest) {
     const mpData: MPPreferenceResponse = await mpResponse.json();
     const checkoutUrl = isSandbox ? mpData.sandbox_init_point : mpData.init_point;
 
-    console.log('✅ Preferencia creada:', mpData.id);
-    console.log('✅ Checkout URL:', checkoutUrl);
+    console.log('💳 Preferencia MP creada:', mpData.id);
+
+    // ── 4. Crear transacción en Supabase con el preference_id ─────────────────
+    const { data: transaction, error: txError } = await supabaseAdmin
+      .from('transactions')
+      .insert({
+        user_id:           userId,
+        product_id:        productId || null,
+        birth_data_id:     birthRecord.id,
+        mp_preference_id:  mpData.id,
+        amount:            unitPrice,
+        currency:          'UYU',
+        country_code:      countryCode,
+        status:            'pending',
+      })
+      .select('id')
+      .single();
+
+    if (txError) {
+      console.error('❌ Error creando transacción:', txError);
+      // No bloqueamos el flujo — igual redirigimos al checkout
+    } else {
+      console.log('✅ Transacción creada:', transaction?.id);
+    }
 
     return NextResponse.json({ success: true, checkoutUrl, preferenceId: mpData.id });
 
   } catch (error) {
-    console.error('❌ Error interno en /api/checkout:', error);
+    console.error('❌ Error interno:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor.', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
