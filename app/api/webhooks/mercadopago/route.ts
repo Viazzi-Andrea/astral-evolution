@@ -20,6 +20,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Cuerpo inválido' }, { status: 400 });
   }
 
+  // Body vacío = simulación de MP, responder 200 inmediatamente
+  if (!rawBody || rawBody.trim() === '' || rawBody.trim() === '{}') {
+    return NextResponse.json({ received: true }, { status: 200 });
+  }
+
   let event: { type?: string; data?: { id?: string } };
   try {
     event = JSON.parse(rawBody);
