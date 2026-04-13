@@ -1,20 +1,10 @@
 /**
  * /api/checkout — Mercado Pago (PRODUCCIÓN)
- * 
- * ⚠️  MODO PRUEBA: todos los productos tienen precio $0.10 temporalmente
- * Cuando confirmes que funciona, cambiá PRODUCT_PRICES a los valores reales:
- *   'lectura-esencial':   10.50
- *   'consulta-evolutiva': 26.60
- *   'especial-parejas':   38.50
+ * Supabase client inicializado DENTRO de la función para evitar errores en build time
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 interface MPPreferenceResponse {
   id: string;
@@ -22,11 +12,10 @@ interface MPPreferenceResponse {
   sandbox_init_point: string;
 }
 
-// ⚠️ PRECIO DE PRUEBA — cambiar a reales cuando funcione
 const PRODUCT_PRICES: Record<string, number> = {
-  'lectura-esencial':   0.10,
-  'consulta-evolutiva': 0.10,
-  'especial-parejas':   0.10,
+  'lectura-esencial':   10.50,
+  'consulta-evolutiva': 26.60,
+  'especial-parejas':   38.50,
 };
 
 const PRODUCT_NAMES: Record<string, string> = {
@@ -37,6 +26,13 @@ const PRODUCT_NAMES: Record<string, string> = {
 
 export async function POST(request: NextRequest) {
   try {
+    // Supabase inicializado dentro de la función (no a nivel módulo)
+    // Esto evita el error "Invalid supabaseUrl" durante el build
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     const body = await request.json();
     const { productSlug, productId, birthData, countryCode = 'UY' } = body;
 
@@ -119,7 +115,7 @@ export async function POST(request: NextRequest) {
     const appUrl       = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
     const isSandbox    = accessToken.startsWith('TEST-');
     const isLocalhost  = appUrl.includes('localhost');
-    const unitPrice    = PRODUCT_PRICES[productSlug] ?? 0.10;
+    const unitPrice    = PRODUCT_PRICES[productSlug] ?? 10.50;
     const productTitle = PRODUCT_NAMES[productSlug] ?? 'Lectura Astrológica — Astral Evolution';
 
     const preference: Record<string, unknown> = {
@@ -153,7 +149,6 @@ export async function POST(request: NextRequest) {
       expires:              false,
     };
 
-    // auto_return solo cuando hay URL pública (no localhost, no sandbox)
     if (!isSandbox && !isLocalhost) {
       preference.auto_return = 'approved';
     }
