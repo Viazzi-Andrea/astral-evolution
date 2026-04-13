@@ -1,57 +1,23 @@
 /**
  * POST /api/webhooks/mercadopago
- *
- * Recibe notificaciones IPN de Mercado Pago, verifica la autenticidad
- * y dispara la generación del reporte astrológico.
- *
- * Docs MP: https://www.mercadopago.com.ar/developers/es/docs/your-integrations/notifications/ipn
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 
-// ─── Supabase Admin Client (service role — solo servidor) ─────────────────────
 function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  if (!url || !key) throw new Error('Supabase env vars missing');
-  return createClient(url, key);
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 }
 
-// ─── Verificación de firma MP (x-signature header) ───────────────────────────
-function verifyMpSignature(request: NextRequest, rawBody: string): boolean {
-  const secret = process.env.MP_WEBHOOK_SECRET;
-  if (!secret) {
-    console.warn('[webhook-mp] MP_WEBHOOK_SECRET no configurado — saltando verificación');
-    return true; // En sandbox sin secret, permitir. En producción debe ser obligatorio.
-  }
-
-  const xSignature = request.headers.get('x-signature') ?? '';
-  const xRequestId = request.headers.get('x-request-id') ?? '';
-  const dataId = new URL(request.url).searchParams.get('data.id') ?? '';
-
-  // Construir el manifest según docs de MP
-  const manifest = `id:${dataId};request-id:${xRequestId};ts:${xSignature.split(',').find(p => p.startsWith('ts='))?.split('=')[1] ?? ''};`;
-  const hmac = crypto.createHmac('sha256', secret).update(manifest).digest('hex');
-  const receivedHash = xSignature.split(',').find(p => p.startsWith('v1='))?.split('=')[1] ?? '';
-
-  return crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(receivedHash));
-}
-
-// ─── Handler ──────────────────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
   let rawBody = '';
   try {
     rawBody = await request.text();
   } catch {
     return NextResponse.json({ error: 'Cuerpo inválido' }, { status: 400 });
-  }
-
-  // 1. Verificar firma
-  if (!verifyMpSignature(request, rawBody)) {
-    console.error('[webhook-mp] Firma inválida');
-    return NextResponse.json({ error: 'Firma inválida' }, { status: 401 });
   }
 
   let event: { type?: string; data?: { id?: string } };
@@ -61,86 +27,241 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
   }
 
-  // 2. Solo procesar pagos aprobados
-  if (event.type !== 'payment') {
+  // Responder 200 inmediatamente para evitar timeout de MP
+  // Todo el procesamiento va en background
+  if (event.type !== 'payment' || !event.data?.id) {
     return NextResponse.json({ received: true }, { status: 200 });
   }
 
-  const paymentId = event.data?.id;
-  if (!paymentId) {
-    return NextResponse.json({ error: 'payment id ausente' }, { status: 400 });
-  }
+  const paymentId = event.data.id;
 
-  // 3. Consultar el pago en la API de MP para validar el estado real
+  // Procesar en background — no bloqueamos la respuesta
+  processPayment(paymentId).catch(err =>
+    console.error('[webhook-mp] Error en background:', err)
+  );
+
+  return NextResponse.json({ received: true }, { status: 200 });
+}
+
+async function processPayment(paymentId: string) {
+  console.log('[webhook-mp] Procesando pago:', paymentId);
+
+  // 1. Consultar el pago en MP
   const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
     headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
   });
 
   if (!mpRes.ok) {
     console.error('[webhook-mp] No se pudo obtener el pago:', paymentId);
-    return NextResponse.json({ error: 'Error consultando pago' }, { status: 502 });
+    return;
   }
 
   const payment = await mpRes.json();
+  console.log('[webhook-mp] Estado del pago:', payment.status);
 
   if (payment.status !== 'approved') {
-    console.log('[webhook-mp] Pago no aprobado, status:', payment.status);
-    return NextResponse.json({ received: true }, { status: 200 });
+    console.log('[webhook-mp] Pago no aprobado, ignorando');
+    return;
   }
 
-  // 4. Actualizar la transacción en Supabase
-  try {
-    const supabase = getSupabaseAdmin();
-    const externalRef: string = payment.external_reference ?? '';
-    const [productSlug] = externalRef.split('|');
+  // 2. Buscar la transacción por preference_id
+  const supabase = getSupabaseAdmin();
+  const preferenceId: string = payment.preference_id ?? '';
 
-    // Buscar la transacción por preference_id o external_reference
-    const { data: transaction, error: txError } = await supabase
-      .from('transactions')
-      .select('id')
-      .eq('mp_preference_id', payment.order?.id ?? '')
-      .single();
+  console.log('[webhook-mp] Buscando transacción con preference_id:', preferenceId);
 
-    if (txError || !transaction) {
-      console.error('[webhook-mp] Transacción no encontrada para payment:', paymentId);
-      // No devolvemos error para que MP no reintente infinitamente
-      return NextResponse.json({ received: true }, { status: 200 });
-    }
+  const { data: transaction, error: txError } = await supabase
+    .from('transactions')
+    .select('id, birth_data_id, product_id')
+    .eq('mp_preference_id', preferenceId)
+    .maybeSingle();
 
-    await supabase
-      .from('transactions')
-      .update({
-        status: 'completed',
-        mp_payment_id: String(paymentId),
-        mp_status_detail: payment.status_detail,
-        completed_at: new Date().toISOString(),
-      })
-      .eq('id', transaction.id);
+  if (txError || !transaction) {
+    console.error('[webhook-mp] Transacción no encontrada. preference_id:', preferenceId);
+    return;
+  }
 
-    // 5. Disparar generación del reporte en background
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-    fetch(`${appUrl}/api/generate-report`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ transactionId: transaction.id, productSlug }),
-    }).catch(err => console.error('[webhook-mp] Error disparando reporte:', err));
+  console.log('[webhook-mp] Transacción encontrada:', transaction.id);
 
-    // 6. Notificación WhatsApp
-    fetch(`${appUrl}/api/notify-whatsapp`, {
+  // 3. Actualizar transacción a completed
+  await supabase
+    .from('transactions')
+    .update({
+      status:           'completed',
+      mp_payment_id:    String(paymentId),
+      mp_status_detail: payment.status_detail,
+      completed_at:     new Date().toISOString(),
+    })
+    .eq('id', transaction.id);
+
+  console.log('[webhook-mp] ✅ Transacción actualizada a completed');
+
+  // 4. Obtener datos de nacimiento
+  const { data: birthData } = await supabase
+    .from('birth_data')
+    .select('*')
+    .eq('id', transaction.birth_data_id)
+    .single();
+
+  if (!birthData) {
+    console.error('[webhook-mp] No se encontraron datos de nacimiento');
+    return;
+  }
+
+  // 5. Obtener slug del producto
+  const { data: product } = await supabase
+    .from('products')
+    .select('slug')
+    .eq('id', transaction.product_id)
+    .single();
+
+  const productSlug = product?.slug ?? 'lectura-esencial';
+
+  // 6. Generar reporte con Gemini
+  await generateReport(supabase, transaction.id, productSlug, birthData);
+
+  // 7. Notificar WhatsApp
+  notifyWhatsApp(payment, productSlug).catch(err =>
+    console.error('[webhook-mp] Error WhatsApp:', err)
+  );
+}
+
+async function generateReport(
+  supabase: ReturnType<typeof createClient>,
+  transactionId: string,
+  productSlug: string,
+  birthData: Record<string, string>
+) {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) {
+    console.error('[webhook-mp] GEMINI_API_KEY no configurada');
+    return;
+  }
+
+  const prompt = buildPrompt(productSlug, birthData);
+
+  console.log('[webhook-mp] Generando reporte con Gemini...');
+
+  const geminiRes = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        amount: payment.transaction_amount,
-        currency: payment.currency_id,
-        productSlug,
-        payerEmail: payment.payer?.email,
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.75, maxOutputTokens: 4096 },
       }),
-    }).catch(err => console.error('[webhook-mp] Error notificando WhatsApp:', err));
+    }
+  );
 
-  } catch (err) {
-    console.error('[webhook-mp] Error interno:', err);
-    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
+  if (!geminiRes.ok) {
+    console.error('[webhook-mp] Error Gemini:', geminiRes.status);
+    return;
   }
 
-  return NextResponse.json({ received: true }, { status: 200 });
+  const geminiData = await geminiRes.json();
+  const reportText: string =
+    geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+
+  if (!reportText) {
+    console.error('[webhook-mp] Gemini devolvió respuesta vacía');
+    return;
+  }
+
+  // Sanitizar output
+  const sanitized = reportText
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+="[^"]*"/gi, '');
+
+  await supabase
+    .from('transactions')
+    .update({
+      report_text:         sanitized,
+      report_generated_at: new Date().toISOString(),
+    })
+    .eq('id', transactionId);
+
+  console.log('[webhook-mp] ✅ Reporte generado y guardado para transacción:', transactionId);
+}
+
+async function notifyWhatsApp(payment: Record<string, unknown>, productSlug: string) {
+  const accountSid  = process.env.WHATSAPP_ACCOUNT_SID;
+  const authToken   = process.env.WHATSAPP_AUTH_TOKEN;
+  const fromNumber  = process.env.WHATSAPP_FROM_NUMBER;
+  const toNumber    = process.env.WHATSAPP_NOTIFY_NUMBER;
+
+  if (!accountSid || !authToken || !fromNumber || !toNumber) {
+    console.warn('[webhook-mp] WhatsApp no configurado');
+    return;
+  }
+
+  const message = `✨ Nueva venta en Astral Evolution!\n\nProducto: ${productSlug}\nMonto: ${payment.transaction_amount} ${payment.currency_id}\nCliente: ${(payment.payer as Record<string, string>)?.email}`;
+
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+  const body = new URLSearchParams({
+    From: fromNumber,
+    To:   toNumber,
+    Body: message,
+  });
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: body.toString(),
+  });
+
+  if (res.ok) {
+    console.log('[webhook-mp] ✅ WhatsApp enviado');
+  } else {
+    console.error('[webhook-mp] Error WhatsApp:', await res.text());
+  }
+}
+
+function buildPrompt(slug: string, bd: Record<string, string>): string {
+  const base = `Nombre: ${bd.name}
+Fecha de nacimiento: ${bd.birth_date}
+Hora de nacimiento: ${bd.birth_time}
+Ciudad: ${bd.birth_city}, ${bd.birth_country}
+${bd.personal_context ? `Contexto personal: ${bd.personal_context}` : ''}`;
+
+  const prompts: Record<string, string> = {
+    'lectura-esencial': `Eres un astrólogo profesional. Genera una lectura astrológica esencial para:
+${base}
+
+Incluye:
+1. Análisis del Sol, Luna y Ascendente
+2. Tránsitos planetarios del mes actual
+3. Energías disponibles y recomendaciones prácticas
+
+Escribe en español, tono cálido y profesional. Mínimo 500 palabras.`,
+
+    'consulta-evolutiva': `Eres un astrólogo evolutivo. Genera un dossier astrológico completo para:
+${base}
+
+Incluye:
+1. Carta natal completa (todos los planetas y casas)
+2. Aspectos planetarios y significado evolutivo
+3. Tránsitos importantes del año
+4. Nodos lunares y propósito kármico
+5. Plan de crecimiento personalizado
+
+Escribe en español, tono profundo. Mínimo 1500 palabras.`,
+
+    'especial-parejas': `Eres un astrólogo especialista en relaciones. Genera un análisis de sinastría completo.
+${base}
+
+Incluye:
+1. Sinastría completa entre ambas cartas
+2. Compatibilidad de Sol, Luna y Ascendente
+3. Fortalezas y desafíos de la relación
+4. Recomendaciones para armonizar
+
+Escribe en español. Mínimo 1200 palabras.`,
+  };
+
+  return prompts[slug] ?? prompts['lectura-esencial'];
 }
