@@ -82,32 +82,32 @@ async function processPayment(paymentId: string) {
 
   const supabase = getSupabaseAdmin();
 
-  // Buscar transacción existente por preference_id o crear una nueva
+  // Upsert — si ya existe por mp_payment_id la actualiza, si no la crea
   let transactionId: string;
 
-  const { data: existing } = await supabase
+  const { data: existingTx } = await supabase
     .from('transactions')
     .select('id')
-    .eq('mp_preference_id', payment.order?.id ?? '')
+    .eq('mp_payment_id', String(paymentId))
     .maybeSingle();
 
-  if (existing) {
-    transactionId = existing.id;
+  if (existingTx) {
+    transactionId = existingTx.id;
     console.log('[webhook-mp] Transacción existente:', transactionId);
   } else {
-    // Crear transacción desde el webhook si no existe
     const { data: newTx, error: txError } = await supabase
       .from('transactions')
       .insert({
-        user_id:       userId,
-        product_id:    productId || null,
-        birth_data_id: birthDataId,
-        mp_payment_id: String(paymentId),
-        amount:        payment.transaction_amount,
-        currency:      payment.currency_id,
-        country_code:  meta.country_code ?? 'UY',
-        status:        'completed',
-        completed_at:  new Date().toISOString(),
+        user_id:          userId,
+        product_id:       productId || null,
+        birth_data_id:    birthDataId,
+        mp_payment_id:    String(paymentId),
+        amount:           payment.transaction_amount,
+        currency:         payment.currency_id,
+        country_code:     meta.country_code ?? 'UY',
+        status:           'completed',
+        completed_at:     new Date().toISOString(),
+        mp_status_detail: payment.status_detail,
       })
       .select('id')
       .single();
@@ -120,7 +120,7 @@ async function processPayment(paymentId: string) {
     console.log('[webhook-mp] ✅ Transacción creada:', transactionId);
   }
 
-  // Actualizar a completed
+  // Actualizar a completed siempre
   await supabase
     .from('transactions')
     .update({
@@ -167,7 +167,7 @@ async function generateReport(
   console.log('[webhook-mp] Generando reporte con Gemini...');
 
   const geminiRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
