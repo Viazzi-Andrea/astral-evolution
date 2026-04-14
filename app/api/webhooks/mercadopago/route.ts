@@ -37,7 +37,6 @@ export async function POST(request: NextRequest) {
 
   const paymentId = event.data.id;
 
-  // Procesar sincrónicamente — Netlify mata los procesos background
   try {
     await processPayment(paymentId);
   } catch (err) {
@@ -50,7 +49,6 @@ export async function POST(request: NextRequest) {
 async function processPayment(paymentId: string) {
   console.log('[webhook-mp] Procesando pago:', paymentId);
 
-  // 1. Consultar el pago en MP
   const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
     headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
   });
@@ -61,38 +59,68 @@ async function processPayment(paymentId: string) {
   }
 
   const payment = await mpRes.json();
-
-  // Log para debug — ver qué campos trae MP
   console.log('[webhook-mp] Estado:', payment.status);
-  console.log('[webhook-mp] preference_id:', payment.preference_id);
-  console.log('[webhook-mp] order:', JSON.stringify(payment.order));
-  console.log('[webhook-mp] external_reference:', payment.external_reference);
 
   if (payment.status !== 'approved') {
     console.log('[webhook-mp] Pago no aprobado, ignorando');
     return;
   }
 
-  // 2. Buscar la transacción por preference_id
-  const supabase = getSupabaseAdmin();
-  const preferenceId: string = payment.preference_id ?? '';
+  // Usar metadata que guardamos al crear la preferencia
+  const meta = payment.metadata ?? {};
+  const userId      = meta.user_id ?? '';
+  const birthDataId = meta.birth_data_id ?? '';
+  const productId   = meta.product_id ?? '';
+  const productSlug = meta.product_slug ?? 'lectura-esencial';
 
-  console.log('[webhook-mp] Buscando transacción con preference_id:', preferenceId);
+  console.log('[webhook-mp] metadata:', JSON.stringify(meta));
 
-  const { data: transaction, error: txError } = await supabase
-    .from('transactions')
-    .select('id, birth_data_id, product_id')
-    .eq('mp_preference_id', preferenceId)
-    .maybeSingle();
-
-  if (txError || !transaction) {
-    console.error('[webhook-mp] Transacción no encontrada. preference_id:', preferenceId);
+  if (!userId || !birthDataId) {
+    console.error('[webhook-mp] metadata incompleto — no se puede procesar');
     return;
   }
 
-  console.log('[webhook-mp] Transacción encontrada:', transaction.id);
+  const supabase = getSupabaseAdmin();
 
-  // 3. Actualizar transacción a completed
+  // Buscar transacción existente por preference_id o crear una nueva
+  let transactionId: string;
+
+  const { data: existing } = await supabase
+    .from('transactions')
+    .select('id')
+    .eq('mp_preference_id', payment.order?.id ?? '')
+    .maybeSingle();
+
+  if (existing) {
+    transactionId = existing.id;
+    console.log('[webhook-mp] Transacción existente:', transactionId);
+  } else {
+    // Crear transacción desde el webhook si no existe
+    const { data: newTx, error: txError } = await supabase
+      .from('transactions')
+      .insert({
+        user_id:       userId,
+        product_id:    productId || null,
+        birth_data_id: birthDataId,
+        mp_payment_id: String(paymentId),
+        amount:        payment.transaction_amount,
+        currency:      payment.currency_id,
+        country_code:  meta.country_code ?? 'UY',
+        status:        'completed',
+        completed_at:  new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+
+    if (txError || !newTx) {
+      console.error('[webhook-mp] Error creando transacción:', txError?.message);
+      return;
+    }
+    transactionId = newTx.id;
+    console.log('[webhook-mp] ✅ Transacción creada:', transactionId);
+  }
+
+  // Actualizar a completed
   await supabase
     .from('transactions')
     .update({
@@ -101,15 +129,15 @@ async function processPayment(paymentId: string) {
       mp_status_detail: payment.status_detail,
       completed_at:     new Date().toISOString(),
     })
-    .eq('id', transaction.id);
+    .eq('id', transactionId);
 
   console.log('[webhook-mp] ✅ Transacción actualizada a completed');
 
-  // 4. Obtener datos de nacimiento
+  // Obtener datos de nacimiento
   const { data: birthData } = await supabase
     .from('birth_data')
     .select('*')
-    .eq('id', transaction.birth_data_id)
+    .eq('id', birthDataId)
     .single();
 
   if (!birthData) {
@@ -117,19 +145,10 @@ async function processPayment(paymentId: string) {
     return;
   }
 
-  // 5. Obtener slug del producto
-  const { data: product } = await supabase
-    .from('products')
-    .select('slug')
-    .eq('id', transaction.product_id)
-    .single();
+  // Generar reporte con Gemini
+  await generateReport(supabase, transactionId, productSlug, birthData);
 
-  const productSlug = product?.slug ?? 'lectura-esencial';
-
-  // 6. Generar reporte con Gemini
-  await generateReport(supabase, transaction.id, productSlug, birthData);
-
-  // 7. Notificar WhatsApp
+  // Notificar WhatsApp
   await notifyWhatsApp(payment, productSlug);
 }
 
@@ -145,7 +164,6 @@ async function generateReport(
     return;
   }
 
-  const prompt = buildPrompt(productSlug, birthData);
   console.log('[webhook-mp] Generando reporte con Gemini...');
 
   const geminiRes = await fetch(
@@ -154,7 +172,7 @@ async function generateReport(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [{ parts: [{ text: buildPrompt(productSlug, birthData) }] }],
         generationConfig: { temperature: 0.75, maxOutputTokens: 4096 },
       }),
     }
@@ -231,15 +249,15 @@ ${bd.personal_context ? `Contexto personal: ${bd.personal_context}` : ''}`;
   const prompts: Record<string, string> = {
     'lectura-esencial': `Eres un astrólogo profesional. Genera una lectura astrológica esencial para:
 ${base}
-Incluye: Sol, Luna y Ascendente, tránsitos del mes, recomendaciones.
-Escribe en español, tono cálido. Mínimo 500 palabras.`,
-    'consulta-evolutiva': `Eres un astrólogo evolutivo. Genera un dossier completo para:
+Incluye: análisis de Sol, Luna y Ascendente, tránsitos del mes actual, recomendaciones prácticas.
+Escribe en español, tono cálido y profesional. Mínimo 500 palabras.`,
+    'consulta-evolutiva': `Eres un astrólogo evolutivo. Genera un dossier astrológico completo para:
 ${base}
-Incluye: carta natal, aspectos, tránsitos del año, nodos lunares, plan de crecimiento.
+Incluye: carta natal completa, aspectos planetarios, tránsitos del año, nodos lunares, plan de crecimiento.
 Escribe en español, tono profundo. Mínimo 1500 palabras.`,
     'especial-parejas': `Eres astrólogo especialista en relaciones. Genera análisis de sinastría para:
 ${base}
-Incluye: compatibilidad, fortalezas, desafíos, recomendaciones.
+Incluye: compatibilidad, fortalezas, desafíos, recomendaciones para armonizar.
 Escribe en español. Mínimo 1200 palabras.`,
   };
 
