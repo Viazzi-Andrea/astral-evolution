@@ -20,7 +20,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Cuerpo inválido' }, { status: 400 });
   }
 
-  // Body vacío = simulación de MP, responder 200 inmediatamente
   if (!rawBody || rawBody.trim() === '' || rawBody.trim() === '{}') {
     return NextResponse.json({ received: true }, { status: 200 });
   }
@@ -32,8 +31,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
   }
 
-  // Responder 200 inmediatamente para evitar timeout de MP
-  // Todo el procesamiento va en background
   if (event.type !== 'payment' || !event.data?.id) {
     return NextResponse.json({ received: true }, { status: 200 });
   }
@@ -52,9 +49,7 @@ export async function POST(request: NextRequest) {
 
 async function processPayment(paymentId: string) {
   console.log('[webhook-mp] Procesando pago:', paymentId);
-  console.log('[webhook-mp] preference_id:', payment.preference_id);
-  console.log('[webhook-mp] order:', JSON.stringify(payment.order));
-  console.log('[webhook-mp] external_reference:', payment.external_reference);
+
   // 1. Consultar el pago en MP
   const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
     headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
@@ -66,7 +61,12 @@ async function processPayment(paymentId: string) {
   }
 
   const payment = await mpRes.json();
-  console.log('[webhook-mp] Estado del pago:', payment.status);
+
+  // Log para debug — ver qué campos trae MP
+  console.log('[webhook-mp] Estado:', payment.status);
+  console.log('[webhook-mp] preference_id:', payment.preference_id);
+  console.log('[webhook-mp] order:', JSON.stringify(payment.order));
+  console.log('[webhook-mp] external_reference:', payment.external_reference);
 
   if (payment.status !== 'approved') {
     console.log('[webhook-mp] Pago no aprobado, ignorando');
@@ -130,9 +130,7 @@ async function processPayment(paymentId: string) {
   await generateReport(supabase, transaction.id, productSlug, birthData);
 
   // 7. Notificar WhatsApp
-  notifyWhatsApp(payment, productSlug).catch(err =>
-    console.error('[webhook-mp] Error WhatsApp:', err)
-  );
+  await notifyWhatsApp(payment, productSlug);
 }
 
 async function generateReport(
@@ -148,7 +146,6 @@ async function generateReport(
   }
 
   const prompt = buildPrompt(productSlug, birthData);
-
   console.log('[webhook-mp] Generando reporte con Gemini...');
 
   const geminiRes = await fetch(
@@ -169,15 +166,13 @@ async function generateReport(
   }
 
   const geminiData = await geminiRes.json();
-  const reportText: string =
-    geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  const reportText: string = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
   if (!reportText) {
     console.error('[webhook-mp] Gemini devolvió respuesta vacía');
     return;
   }
 
-  // Sanitizar output
   const sanitized = reportText
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/javascript:/gi, '')
@@ -191,14 +186,14 @@ async function generateReport(
     })
     .eq('id', transactionId);
 
-  console.log('[webhook-mp] ✅ Reporte generado y guardado para transacción:', transactionId);
+  console.log('[webhook-mp] ✅ Reporte generado:', transactionId);
 }
 
 async function notifyWhatsApp(payment: Record<string, unknown>, productSlug: string) {
-  const accountSid  = process.env.WHATSAPP_ACCOUNT_SID;
-  const authToken   = process.env.WHATSAPP_AUTH_TOKEN;
-  const fromNumber  = process.env.WHATSAPP_FROM_NUMBER;
-  const toNumber    = process.env.WHATSAPP_NOTIFY_NUMBER;
+  const accountSid = process.env.WHATSAPP_ACCOUNT_SID;
+  const authToken  = process.env.WHATSAPP_AUTH_TOKEN;
+  const fromNumber = process.env.WHATSAPP_FROM_NUMBER;
+  const toNumber   = process.env.WHATSAPP_NOTIFY_NUMBER;
 
   if (!accountSid || !authToken || !fromNumber || !toNumber) {
     console.warn('[webhook-mp] WhatsApp no configurado');
@@ -207,21 +202,17 @@ async function notifyWhatsApp(payment: Record<string, unknown>, productSlug: str
 
   const message = `✨ Nueva venta en Astral Evolution!\n\nProducto: ${productSlug}\nMonto: ${payment.transaction_amount} ${payment.currency_id}\nCliente: ${(payment.payer as Record<string, string>)?.email}`;
 
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
-  const body = new URLSearchParams({
-    From: fromNumber,
-    To:   toNumber,
-    Body: message,
-  });
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: body.toString(),
-  });
+  const res = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({ From: fromNumber, To: toNumber, Body: message }).toString(),
+    }
+  );
 
   if (res.ok) {
     console.log('[webhook-mp] ✅ WhatsApp enviado');
@@ -240,35 +231,15 @@ ${bd.personal_context ? `Contexto personal: ${bd.personal_context}` : ''}`;
   const prompts: Record<string, string> = {
     'lectura-esencial': `Eres un astrólogo profesional. Genera una lectura astrológica esencial para:
 ${base}
-
-Incluye:
-1. Análisis del Sol, Luna y Ascendente
-2. Tránsitos planetarios del mes actual
-3. Energías disponibles y recomendaciones prácticas
-
-Escribe en español, tono cálido y profesional. Mínimo 500 palabras.`,
-
-    'consulta-evolutiva': `Eres un astrólogo evolutivo. Genera un dossier astrológico completo para:
+Incluye: Sol, Luna y Ascendente, tránsitos del mes, recomendaciones.
+Escribe en español, tono cálido. Mínimo 500 palabras.`,
+    'consulta-evolutiva': `Eres un astrólogo evolutivo. Genera un dossier completo para:
 ${base}
-
-Incluye:
-1. Carta natal completa (todos los planetas y casas)
-2. Aspectos planetarios y significado evolutivo
-3. Tránsitos importantes del año
-4. Nodos lunares y propósito kármico
-5. Plan de crecimiento personalizado
-
+Incluye: carta natal, aspectos, tránsitos del año, nodos lunares, plan de crecimiento.
 Escribe en español, tono profundo. Mínimo 1500 palabras.`,
-
-    'especial-parejas': `Eres un astrólogo especialista en relaciones. Genera un análisis de sinastría completo.
+    'especial-parejas': `Eres astrólogo especialista en relaciones. Genera análisis de sinastría para:
 ${base}
-
-Incluye:
-1. Sinastría completa entre ambas cartas
-2. Compatibilidad de Sol, Luna y Ascendente
-3. Fortalezas y desafíos de la relación
-4. Recomendaciones para armonizar
-
+Incluye: compatibilidad, fortalezas, desafíos, recomendaciones.
 Escribe en español. Mínimo 1200 palabras.`,
   };
 
