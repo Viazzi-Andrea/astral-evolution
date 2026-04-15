@@ -18,9 +18,9 @@ const PRODUCT_PRICES: Record<string, { amount: number; title: string }> = {
 
 // ─── IDs de productos en Supabase (hardcoded como fallback seguro) ────────────
 const PRODUCT_IDS: Record<string, string> = {
-  'lectura-esencial': 'e53d85c4-3599-4a82-80d8-5d313fc3c916',
-  'consulta-evolutiva': 'e1c9e6a0-2e6a-41b4-a741-c413b6c955f8',
-  'especial-parejas': '930bfe28-0c0f-433e-84bd-3cc57827aafa',
+  'lectura-esencial': '5ae9b326-62fb-4833-b12c-acb0a34a37e3',
+  'consulta-evolutiva': '585f34fd-a14e-45f1-9e76-cb5811c31373',
+  'especial-parejas': 'f593bc9f-e3a5-4e13-b8ba-924ac92edc75',
 };
 
 export async function POST(request: NextRequest) {
