@@ -152,6 +152,9 @@ export async function POST(request: NextRequest) {
     }
 
     // ─── 8. Crear transacción pendiente en Supabase ───────────────────────
+    const DISCOUNT_CODES = { PRUEBA100: 100, ASTRAL50: 50, CUMPLE: 20 };
+    const discountPct = discountCode ? (DISCOUNT_CODES[String(discountCode).toUpperCase()] || 0) : 0;
+    const finalAmount = discountPct === 100 ? 0.01 : Math.round(productPrice.amount * (1 - discountPct / 100) * 100) / 100;
     const { data: transaction, error: txError } = await supabase
       .from('transactions')
       .insert({
@@ -159,10 +162,7 @@ export async function POST(request: NextRequest) {
         product_id: PRODUCT_IDS[productSlug],
         birth_data_id: birthRecord.id,
         partner_birth_data_id: partnerBirthId,
-        // Aplicar descuento si hay codigo valido
-        const DISCOUNT_CODES: Record<string, number> = { PRUEBA100: 100, ASTRAL50: 50, CUMPLE: 20 };
-        const discountPct = discountCode ? (DISCOUNT_CODES[discountCode.toUpperCase()] ?? 0) : 0;
-        const finalAmount = discountPct === 100 ? 0.01 : productPrice.amount * (1 - discountPct / 100);
+        amount: Math.round(finalAmount * 100) / 100,
         amount: Math.round(finalAmount * 100) / 100,
         currency: 'USD',
         country_code: countryCode,
