@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { BirthDataForm, BirthDataFormData } from '@/components/forms/birth-data-form';
 import { calculateLocalPrice, getCountryFromIP } from '@/lib/pricing';
+import { DiscountField } from '@/components/discount-field';
 import { CircleCheck as CheckCircle2, Sparkles, Clock, FileText, ShieldCheck } from 'lucide-react';
 
 // Supabase NO se usa desde el cliente.
@@ -146,6 +147,7 @@ export default function ProductPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [discountPercent, setDiscountPercent] = useState(0);
   const [countryCode, setCountryCode] = useState('UY');
   const [pricing, setPricing] = useState({
     amount: 0,
@@ -182,7 +184,8 @@ export default function ProductPage() {
 
   useEffect(() => {
     if (product) {
-      const localPricing = calculateLocalPrice(product.base_price_usd, countryCode, slug);
+      const basePrice = product.base_price_usd * (1 - discountPercent / 100);
+      const localPricing = calculateLocalPrice(basePrice, countryCode, slug);
       setPricing(localPricing);
     }
   }, [product, countryCode, slug]);
@@ -351,6 +354,7 @@ export default function ProductPage() {
           <div className="max-w-3xl mx-auto">
             <div className="bg-gradient-to-b from-white/5 to-transparent border border-white/10 rounded-2xl p-8">
               <h2 className="text-2xl font-bold mb-6 text-center">Completa tus Datos</h2>
+              <DiscountField onDiscount={(pct) => { setDiscountPercent(pct); (window as any).__discountCode = pct > 0 ? document.querySelector('input[class*=uppercase]')?.value : null; }} />
               <BirthDataForm
                 onSubmit={handleFormSubmit}
                 isLoading={submitting}

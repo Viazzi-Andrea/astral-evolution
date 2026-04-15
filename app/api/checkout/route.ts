@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { productSlug, birthData, partnerBirthData, countryCode } = parsed.data;
+  const { productSlug, birthData, partnerBirthData, countryCode, discountCode } = parsed.data;
 
   // ─── 3. Verificar que el producto requiere partner data si aplica ──────────
   if (productSlug === 'especial-parejas' && !partnerBirthData) {
@@ -159,7 +159,11 @@ export async function POST(request: NextRequest) {
         product_id: PRODUCT_IDS[productSlug],
         birth_data_id: birthRecord.id,
         partner_birth_data_id: partnerBirthId,
-        amount: productPrice.amount,
+        // Aplicar descuento si hay codigo valido
+        const DISCOUNT_CODES: Record<string, number> = { PRUEBA100: 100, ASTRAL50: 50, CUMPLE: 20 };
+        const discountPct = discountCode ? (DISCOUNT_CODES[discountCode.toUpperCase()] ?? 0) : 0;
+        const finalAmount = discountPct === 100 ? 0.01 : productPrice.amount * (1 - discountPct / 100);
+        amount: Math.round(finalAmount * 100) / 100,
         currency: 'USD',
         country_code: countryCode,
         status: 'pending',
@@ -185,7 +189,7 @@ export async function POST(request: NextRequest) {
             id: productSlug,
             title: productPrice.title,
             quantity: 1,
-            unit_price: productPrice.amount,
+            unit_price: Math.round(finalAmount * 100) / 100,
             currency_id: 'USD',
           },
         ],
