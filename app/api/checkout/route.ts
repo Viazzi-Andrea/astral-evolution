@@ -163,7 +163,6 @@ export async function POST(request: NextRequest) {
         birth_data_id: birthRecord.id,
         partner_birth_data_id: partnerBirthId,
         amount: Math.round(finalAmount * 100) / 100,
-        amount: Math.round(finalAmount * 100) / 100,
         currency: 'USD',
         country_code: countryCode,
         status: 'pending',
