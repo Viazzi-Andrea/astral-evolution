@@ -354,7 +354,7 @@ export default function ProductPage() {
           <div className="max-w-3xl mx-auto">
             <div className="bg-gradient-to-b from-white/5 to-transparent border border-white/10 rounded-2xl p-8">
               <h2 className="text-2xl font-bold mb-6 text-center">Completa tus Datos</h2>
-              <DiscountField onDiscount={(pct) => { setDiscountPercent(pct); (window as any).__discountCode = pct > 0 ? document.querySelector('input[class*=uppercase]')?.value : null; }} />
+              <DiscountField onDiscount={(pct) => { setDiscountPercent(pct); (window as any).__discountCode = pct > 0 ? (document.querySelector('input[class*=uppercase]') as HTMLInputElement)?.value : null; }} />
               <BirthDataForm
                 onSubmit={handleFormSubmit}
                 isLoading={submitting}
