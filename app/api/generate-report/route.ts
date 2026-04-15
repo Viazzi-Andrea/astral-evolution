@@ -217,7 +217,8 @@ export async function POST(request: NextRequest) {
     // Enviar email si tenemos la direcciÃ³n
     if (userEmail) {
       const emailResult = await sendReportEmail({
-        toEmail: userEmail,`n        productSlug: productSlug,
+        toEmail: userEmail,
+        productSlug: productSlug,`n        productSlug: productSlug,
         toName: userName,
         productName,
         reportContent: sanitizedText,
