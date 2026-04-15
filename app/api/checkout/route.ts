@@ -1,214 +1,231 @@
 /**
- * /api/checkout — Mercado Pago (PRODUCCIÓN)
+ * app/api/checkout/route.ts
+ * Checkout con Mercado Pago — reemplaza completamente Paddle.
+ * Crea usuario, birth_data y transacción en Supabase, luego genera la URL de pago de MP.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { CheckoutRequestSchema, validateServerEnv } from '@/lib/validations/schemas';
+import { MercadoPagoConfig, Preference } from 'mercadopago';
 
-interface MPPreferenceResponse {
-  id: string;
-  init_point: string;
-  sandbox_init_point: string;
-}
-
-const PRODUCT_PRICES: Record<string, number> = {
-  'lectura-esencial':   10.50,
-  'consulta-evolutiva': 26.60,
-  'especial-parejas':   38.50,
+// ─── Precios reales por producto ──────────────────────────────────────────────
+const PRODUCT_PRICES: Record<string, { amount: number; title: string }> = {
+  'lectura-esencial': { amount: 10.5, title: 'Lectura Esencial — Astral Evolution' },
+  'consulta-evolutiva': { amount: 26.6, title: 'Consulta Evolutiva — Astral Evolution' },
+  'especial-parejas': { amount: 38.5, title: 'Especial Parejas — Astral Evolution' },
 };
 
-const PRODUCT_NAMES: Record<string, string> = {
-  'lectura-esencial':   'Lectura Esencial — Astral Evolution',
-  'consulta-evolutiva': 'Consulta Evolutiva — Astral Evolution',
-  'especial-parejas':   'Especial Parejas — Astral Evolution',
-};
-
-// IDs reales de la tabla products en Supabase
+// ─── IDs de productos en Supabase (hardcoded como fallback seguro) ────────────
 const PRODUCT_IDS: Record<string, string> = {
-  'lectura-esencial':   '5ae9b326-62fb-4833-b12c-acb0a34a37e3',
-  'consulta-evolutiva': '585f34fd-a14e-45f1-9e76-cb5811c31373',
-  'especial-parejas':   'f593bc9f-e3a5-4e13-b8ba-924ac92edc75',
+  'lectura-esencial': 'e53d85c4-3599-4a82-80d8-5d313fc3c916',
+  'consulta-evolutiva': 'e1c9e6a0-2e6a-41b4-a741-c413b6c955f8',
+  'especial-parejas': '930bfe28-0c0f-433e-84bd-3cc57827aafa',
 };
 
 export async function POST(request: NextRequest) {
+  // ─── 1. Validar entorno ───────────────────────────────────────────────────
   try {
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    validateServerEnv();
+  } catch (envError) {
+    console.error('[Checkout] Error de configuración:', envError);
+    return NextResponse.json(
+      { error: 'Error de configuración del servidor. Contacta al administrador.' },
+      { status: 500 }
     );
+  }
 
-    const body = await request.json();
-    const { productSlug, birthData, countryCode = 'UY' } = body;
+  // ─── 2. Parsear y validar input con Zod ──────────────────────────────────
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'JSON inválido en el cuerpo de la petición.' }, { status: 400 });
+  }
 
-    if (!productSlug || !birthData?.email || !birthData?.name) {
+  const parsed = CheckoutRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    const firstError = parsed.error.errors[0];
+    return NextResponse.json(
+      { error: firstError.message, field: firstError.path.join('.') },
+      { status: 422 }
+    );
+  }
+
+  const { productSlug, birthData, partnerBirthData, countryCode } = parsed.data;
+
+  // ─── 3. Verificar que el producto requiere partner data si aplica ──────────
+  if (productSlug === 'especial-parejas' && !partnerBirthData) {
+    return NextResponse.json(
+      { error: 'Se requieren los datos de nacimiento de la pareja para este producto.' },
+      { status: 422 }
+    );
+  }
+
+  const productPrice = PRODUCT_PRICES[productSlug];
+  if (!productPrice) {
+    return NextResponse.json({ error: 'Producto no encontrado.' }, { status: 404 });
+  }
+
+  // ─── 4. Inicializar clientes ─────────────────────────────────────────────
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
+
+  const mp = new MercadoPagoConfig({
+    accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN!,
+  });
+  const preference = new Preference(mp);
+
+  try {
+    // ─── 5. Upsert de usuario ─────────────────────────────────────────────
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .upsert(
+        {
+          email: birthData.email,
+          name: birthData.name,
+          language: birthData.language ?? 'es',
+          country_code: countryCode,
+        },
+        { onConflict: 'email' }
+      )
+      .select('id')
+      .single();
+
+    if (userError || !user) {
+      console.error('[Checkout] Error upsert usuario:', userError);
       return NextResponse.json(
-        { error: 'Faltan datos requeridos.' },
-        { status: 400 }
-      );
-    }
-
-    const accessToken = process.env.MP_ACCESS_TOKEN?.trim();
-    if (!accessToken) {
-      return NextResponse.json(
-        { error: 'El sistema de pagos no está configurado.' },
+        { error: 'Error al registrar el usuario. Intenta nuevamente.' },
         { status: 500 }
       );
     }
 
-    // ── 1. Guardar / recuperar usuario ────────────────────────────────────────
-    let userId: string;
-
-    const { data: existingUser } = await supabaseAdmin
-      .from('users')
-      .select('id')
-      .eq('email', birthData.email.toLowerCase().trim())
-      .maybeSingle();
-
-    if (existingUser) {
-      userId = existingUser.id;
-    } else {
-      const { data: newUser, error: userError } = await supabaseAdmin
-        .from('users')
-        .insert({
-          email:        birthData.email.toLowerCase().trim(),
-          name:         birthData.name.trim(),
-          country_code: countryCode,
-          language:     'es',
-        })
-        .select('id')
-        .single();
-
-      if (userError || !newUser) {
-        console.error('❌ Error creando usuario:', userError);
-        return NextResponse.json(
-          { error: 'No se pudo registrar el usuario.', details: userError?.message },
-          { status: 500 }
-        );
-      }
-      userId = newUser.id;
-    }
-
-    console.log('👤 Usuario:', userId);
-
-    // ── 2. Guardar datos de nacimiento ────────────────────────────────────────
-    const { data: birthRecord, error: birthError } = await supabaseAdmin
+    // ─── 6. Insertar birth_data principal ────────────────────────────────
+    const { data: birthRecord, error: birthError } = await supabase
       .from('birth_data')
       .insert({
-        user_id:          userId,
-        name:             birthData.name.trim(),
-        birth_date:       birthData.birthDate,
-        birth_time:       birthData.birthTime,
-        birth_city:       birthData.birthCity,
-        birth_country:    birthData.birthCountry,
+        user_id: user.id,
+        name: birthData.name,
+        birth_date: birthData.birthDate,
+        birth_time: birthData.birthTime,
+        birth_city: birthData.birthCity,
+        birth_country: birthData.birthCountry,
         personal_context: birthData.personalContext ?? null,
       })
       .select('id')
       .single();
 
     if (birthError || !birthRecord) {
-      console.error('❌ Error guardando birth_data:', birthError);
+      console.error('[Checkout] Error insertar birth_data:', birthError);
       return NextResponse.json(
-        { error: 'No se pudieron guardar los datos de nacimiento.', details: birthError?.message },
+        { error: 'Error al guardar los datos de nacimiento.' },
         { status: 500 }
       );
     }
 
-    console.log('🌟 Birth data:', birthRecord.id);
+    // ─── 7. Insertar birth_data de la pareja (si aplica) ─────────────────
+    let partnerBirthId: string | null = null;
+    if (partnerBirthData) {
+      const { data: partnerRecord, error: partnerError } = await supabase
+        .from('birth_data')
+        .insert({
+          user_id: user.id,
+          name: partnerBirthData.name,
+          birth_date: partnerBirthData.birthDate,
+          birth_time: partnerBirthData.birthTime,
+          birth_city: partnerBirthData.birthCity,
+          birth_country: partnerBirthData.birthCountry,
+          personal_context: partnerBirthData.personalContext ?? null,
+        })
+        .select('id')
+        .single();
 
-    // ── 3. Crear preferencia en Mercado Pago ──────────────────────────────────
-    const appUrl       = process.env.NEXT_PUBLIC_APP_URL ?? 'https://astralevolution.com';
-    const isSandbox    = accessToken.startsWith('TEST-');
-    const isLocalhost  = appUrl.includes('localhost');
-    const unitPrice    = PRODUCT_PRICES[productSlug] ?? 10.50;
-    const productTitle = PRODUCT_NAMES[productSlug] ?? 'Lectura Astrológica — Astral Evolution';
-    const productId    = PRODUCT_IDS[productSlug] ?? '';
-
-    const preference: Record<string, unknown> = {
-      items: [{
-        id:          productId,
-        title:       productTitle,
-        description: `Reporte astrológico para ${birthData.name}`,
-        category_id: 'services',
-        quantity:    1,
-        currency_id: 'UYU',
-        unit_price:  unitPrice,
-      }],
-      payer: {
-        name:  birthData.name,
-        email: birthData.email.toLowerCase().trim(),
-      },
-      metadata: {
-        product_slug:  productSlug,
-        product_id:    productId,
-        user_id:       userId,
-        birth_data_id: birthRecord.id,
-        country_code:  countryCode,
-      },
-      back_urls: {
-        success: `${appUrl}/gracias?status=success&product=${productSlug}`,
-        failure: `${appUrl}/productos/${productSlug}?status=failure`,
-        pending: `${appUrl}/gracias?status=pending&product=${productSlug}`,
-      },
-      notification_url:     `${appUrl}/api/webhooks/mercadopago`,
-      statement_descriptor: 'ASTRAL EVOLUTION',
-      expires:              false,
-    };
-
-    if (!isSandbox && !isLocalhost) {
-      preference.auto_return = 'approved';
+      if (partnerError) {
+        console.error('[Checkout] Error insertar partner birth_data:', partnerError);
+        // No fatal — continuar sin partner
+      } else {
+        partnerBirthId = partnerRecord?.id ?? null;
+      }
     }
 
-    const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization:  `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(preference),
-    });
-
-    if (!mpResponse.ok) {
-      const errorBody = await mpResponse.json().catch(() => ({}));
-      console.error('❌ Error MP:', mpResponse.status, JSON.stringify(errorBody));
-      return NextResponse.json(
-        { error: 'No se pudo crear el pago.', details: errorBody?.message },
-        { status: 500 }
-      );
-    }
-
-    const mpData: MPPreferenceResponse = await mpResponse.json();
-    const checkoutUrl = isSandbox ? mpData.sandbox_init_point : mpData.init_point;
-
-    console.log('💳 Preferencia MP creada:', mpData.id);
-
-    // ── 4. Crear transacción en Supabase ──────────────────────────────────────
-    const { data: transaction, error: txError } = await supabaseAdmin
+    // ─── 8. Crear transacción pendiente en Supabase ───────────────────────
+    const { data: transaction, error: txError } = await supabase
       .from('transactions')
       .insert({
-        user_id:          userId,
-        product_id:       productId,
-        birth_data_id:    birthRecord.id,
-        mp_preference_id: mpData.id,
-        amount:           unitPrice,
-        currency:         'UYU',
-        country_code:     countryCode,
-        status:           'pending',
+        user_id: user.id,
+        product_id: PRODUCT_IDS[productSlug],
+        birth_data_id: birthRecord.id,
+        partner_birth_data_id: partnerBirthId,
+        amount: productPrice.amount,
+        currency: 'USD',
+        country_code: countryCode,
+        status: 'pending',
       })
       .select('id')
       .single();
 
-    if (txError) {
-      console.error('❌ Error creando transacción:', txError.message);
-    } else {
-      console.log('✅ Transacción creada:', transaction?.id);
+    if (txError || !transaction) {
+      console.error('[Checkout] Error crear transacción:', txError);
+      return NextResponse.json(
+        { error: 'Error al inicializar el pago. Intenta nuevamente.' },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ success: true, checkoutUrl, preferenceId: mpData.id });
+    // ─── 9. Crear preferencia de Mercado Pago ────────────────────────────
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://astralevolution.com';
 
+    const mpPreference = await preference.create({
+      body: {
+        items: [
+          {
+            id: productSlug,
+            title: productPrice.title,
+            quantity: 1,
+            unit_price: productPrice.amount,
+            currency_id: 'USD',
+          },
+        ],
+        payer: {
+          name: birthData.name,
+          email: birthData.email,
+        },
+        external_reference: transaction.id,
+        back_urls: {
+          success: `${appUrl}/gracias?transactionId=${transaction.id}&status=approved`,
+          failure: `${appUrl}/pago-fallido?transactionId=${transaction.id}`,
+          pending: `${appUrl}/gracias?transactionId=${transaction.id}&status=pending`,
+        },
+        auto_return: 'approved',
+        notification_url: `${appUrl}/api/webhooks/mercadopago`,
+        statement_descriptor: 'ASTRAL EVOLUTION',
+        expires: true,
+        expiration_date_to: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // 2 horas
+      },
+    });
+
+    if (!mpPreference.init_point) {
+      console.error('[Checkout] MP no retornó init_point:', mpPreference);
+      return NextResponse.json(
+        { error: 'Error al crear el enlace de pago. Intenta nuevamente.' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      checkoutUrl: mpPreference.init_point,
+      transactionId: transaction.id,
+    });
   } catch (error) {
-    console.error('❌ Error interno:', error);
+    console.error('[Checkout] Error inesperado:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor.', details: error instanceof Error ? error.message : 'Unknown error' },
+      {
+        error: 'Error interno del servidor.',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     );
   }

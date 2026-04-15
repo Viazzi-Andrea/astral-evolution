@@ -1,265 +1,255 @@
 /**
- * POST /api/webhooks/mercadopago
+ * app/api/webhooks/mercadopago/route.ts
+ * Webhook de Mercado Pago — verifica firma HMAC, actualiza transacción,
+ * dispara generación de reporte y envía notificación WhatsApp.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
+import { MercadoPagoWebhookSchema } from '@/lib/validations/schemas';
 
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+// ─── Verificación de firma HMAC-SHA256 ────────────────────────────────────────
+function verifyMPSignature(request: NextRequest, rawBody: string): boolean {
+  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim();
+  if (!secret) {
+    console.warn('[Webhook MP] MERCADOPAGO_WEBHOOK_SECRET no configurado — saltando verificación');
+    return true; // Permitir en desarrollo si no hay secret
+  }
+
+  // MP envía x-signature: ts=<timestamp>,v1=<hash>
+  const xSignature = request.headers.get('x-signature');
+  const xRequestId = request.headers.get('x-request-id');
+  const dataId = new URL(request.url).searchParams.get('data.id');
+
+  if (!xSignature) {
+    console.error('[Webhook MP] Falta header x-signature');
+    return false;
+  }
+
+  const parts = Object.fromEntries(
+    xSignature.split(',').map((part) => part.split('=') as [string, string])
   );
+  const ts = parts['ts'];
+  const v1 = parts['v1'];
+
+  if (!ts || !v1) {
+    console.error('[Webhook MP] Formato de firma inválido');
+    return false;
+  }
+
+  // Construir el mensaje según la documentación de MP
+  const manifest = [
+    dataId ? `id:${dataId}` : null,
+    xRequestId ? `request-id:${xRequestId}` : null,
+    `ts:${ts}`,
+  ]
+    .filter(Boolean)
+    .join(';');
+
+  const expectedHash = crypto
+    .createHmac('sha256', secret)
+    .update(manifest)
+    .digest('hex');
+
+  // Comparación en tiempo constante para evitar timing attacks
+  const isValid = crypto.timingSafeEqual(
+    Buffer.from(v1, 'hex'),
+    Buffer.from(expectedHash, 'hex')
+  );
+
+  return isValid;
 }
 
+// ─── Notificación WhatsApp via Twilio ─────────────────────────────────────────
+async function sendWhatsAppNotification(
+  productName: string,
+  amount: number,
+  customerName: string,
+  customerEmail: string
+): Promise<void> {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim();
+  const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
+  const fromNumber = process.env.TWILIO_WHATSAPP_FROM?.trim() ?? 'whatsapp:+14155238886';
+  const toNumber = process.env.WHATSAPP_NOTIFY_TO?.trim();
+
+  if (!accountSid || !authToken || !toNumber) {
+    console.warn('[WhatsApp] Credenciales no configuradas — saltando notificación');
+    return;
+  }
+
+  const message =
+    `🌟 *Nueva venta en Astral Evolution*\n\n` +
+    `📦 Producto: ${productName}\n` +
+    `💰 Monto: $${amount.toFixed(2)} USD\n` +
+    `👤 Cliente: ${customerName}\n` +
+    `📧 Email: ${customerEmail}\n` +
+    `⏰ Hora: ${new Date().toLocaleString('es-AR', { timeZone: 'America/Montevideo' })}`;
+
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+  const credentials = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+
+  const params = new URLSearchParams({
+    From: fromNumber,
+    To: `whatsapp:${toNumber}`,
+    Body: message,
+  });
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${credentials}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('[WhatsApp] Error Twilio:', err);
+    } else {
+      console.log('[WhatsApp] Notificación enviada OK');
+    }
+  } catch (err) {
+    console.error('[WhatsApp] Error de red:', err);
+  }
+}
+
+// ─── Handler principal ────────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
-  let rawBody = '';
-  try {
-    rawBody = await request.text();
-  } catch {
-    return NextResponse.json({ error: 'Cuerpo inválido' }, { status: 400 });
+  // 1. Leer body como texto para verificar firma
+  const rawBody = await request.text();
+
+  // 2. Verificar firma de MP
+  if (!verifyMPSignature(request, rawBody)) {
+    console.error('[Webhook MP] Firma inválida — rechazando');
+    return NextResponse.json({ error: 'Firma inválida' }, { status: 401 });
   }
 
-  if (!rawBody || rawBody.trim() === '' || rawBody.trim() === '{}') {
-    return NextResponse.json({ received: true }, { status: 200 });
-  }
-
-  let event: { type?: string; data?: { id?: string } };
+  // 3. Parsear y validar body
+  let webhookData: unknown;
   try {
-    event = JSON.parse(rawBody);
+    webhookData = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
   }
 
-  if (event.type !== 'payment' || !event.data?.id) {
-    return NextResponse.json({ received: true }, { status: 200 });
+  const parsed = MercadoPagoWebhookSchema.safeParse(webhookData);
+  if (!parsed.success) {
+    console.error('[Webhook MP] Schema inválido:', parsed.error.errors);
+    return NextResponse.json({ received: true }); // 200 para que MP no reintente
   }
 
-  const paymentId = event.data.id;
+  const { type, data } = parsed.data;
 
-  try {
-    await processPayment(paymentId);
-  } catch (err) {
-    console.error('[webhook-mp] Error procesando pago:', err);
+  // 4. Solo procesar pagos aprobados
+  if (type !== 'payment' || !data?.id) {
+    return NextResponse.json({ received: true });
   }
 
-  return NextResponse.json({ received: true }, { status: 200 });
-}
+  const mpPaymentId = data.id;
+  console.log(`[Webhook MP] Procesando pago ID: ${mpPaymentId}`);
 
-async function processPayment(paymentId: string) {
-  console.log('[webhook-mp] Procesando pago:', paymentId);
-
-  const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-    headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
-  });
-
-  if (!mpRes.ok) {
-    console.error('[webhook-mp] No se pudo obtener el pago:', paymentId);
-    return;
+  // 5. Consultar estado del pago en MP API
+  const mpToken = process.env.MERCADOPAGO_ACCESS_TOKEN?.trim();
+  if (!mpToken) {
+    return NextResponse.json({ error: 'Token de MP no configurado' }, { status: 500 });
   }
 
-  const payment = await mpRes.json();
-  console.log('[webhook-mp] Estado:', payment.status);
-
-  if (payment.status !== 'approved') {
-    console.log('[webhook-mp] Pago no aprobado, ignorando');
-    return;
-  }
-
-  // Usar metadata que guardamos al crear la preferencia
-  const meta = payment.metadata ?? {};
-  const userId      = meta.user_id ?? '';
-  const birthDataId = meta.birth_data_id ?? '';
-  const productId   = meta.product_id ?? '';
-  const productSlug = meta.product_slug ?? 'lectura-esencial';
-
-  console.log('[webhook-mp] metadata:', JSON.stringify(meta));
-
-  if (!userId || !birthDataId) {
-    console.error('[webhook-mp] metadata incompleto — no se puede procesar');
-    return;
-  }
-
-  const supabase = getSupabaseAdmin();
-
-  // Upsert — si ya existe por mp_payment_id la actualiza, si no la crea
-  let transactionId: string;
-
-  const { data: existingTx } = await supabase
-    .from('transactions')
-    .select('id')
-    .eq('mp_payment_id', String(paymentId))
-    .maybeSingle();
-
-  if (existingTx) {
-    transactionId = existingTx.id;
-    console.log('[webhook-mp] Transacción existente:', transactionId);
-  } else {
-    const { data: newTx, error: txError } = await supabase
-      .from('transactions')
-      .insert({
-        user_id:          userId,
-        product_id:       productId || null,
-        birth_data_id:    birthDataId,
-        mp_payment_id:    String(paymentId),
-        amount:           payment.transaction_amount,
-        currency:         payment.currency_id,
-        country_code:     meta.country_code ?? 'UY',
-        status:           'completed',
-        completed_at:     new Date().toISOString(),
-        mp_status_detail: payment.status_detail,
-      })
-      .select('id')
-      .single();
-
-    if (txError || !newTx) {
-      console.error('[webhook-mp] Error creando transacción:', txError?.message);
-      return;
-    }
-    transactionId = newTx.id;
-    console.log('[webhook-mp] ✅ Transacción creada:', transactionId);
-  }
-
-  // Actualizar a completed siempre
-  await supabase
-    .from('transactions')
-    .update({
-      status:           'completed',
-      mp_payment_id:    String(paymentId),
-      mp_status_detail: payment.status_detail,
-      completed_at:     new Date().toISOString(),
-    })
-    .eq('id', transactionId);
-
-  console.log('[webhook-mp] ✅ Transacción actualizada a completed');
-
-  // Obtener datos de nacimiento
-  const { data: birthData } = await supabase
-    .from('birth_data')
-    .select('*')
-    .eq('id', birthDataId)
-    .single();
-
-  if (!birthData) {
-    console.error('[webhook-mp] No se encontraron datos de nacimiento');
-    return;
-  }
-
-  // Generar reporte con Gemini
-  await generateReport(supabase, transactionId, productSlug, birthData);
-
-  // Notificar WhatsApp
-  await notifyWhatsApp(payment, productSlug);
-}
-
-async function generateReport(
-  supabase: any,
-  transactionId: string,
-  productSlug: string,
-  birthData: Record<string, string>
-) {
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
-  if (!apiKey) {
-    console.error('[webhook-mp] GEMINI_API_KEY no configurada');
-    return;
-  }
-
-  console.log('[webhook-mp] Generando reporte con Gemini...');
-
-  const geminiRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: buildPrompt(productSlug, birthData) }] }],
-        generationConfig: { temperature: 0.75, maxOutputTokens: 4096 },
-      }),
-    }
-  );
-
-  if (!geminiRes.ok) {
-    console.error('[webhook-mp] Error Gemini:', geminiRes.status);
-    return;
-  }
-
-  const geminiData = await geminiRes.json();
-  const reportText: string = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-
-  if (!reportText) {
-    console.error('[webhook-mp] Gemini devolvió respuesta vacía');
-    return;
-  }
-
-  const sanitized = reportText
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/javascript:/gi, '')
-    .replace(/on\w+="[^"]*"/gi, '');
-
-  await supabase
-    .from('transactions')
-    .update({
-      report_text:         sanitized,
-      report_generated_at: new Date().toISOString(),
-    })
-    .eq('id', transactionId);
-
-  console.log('[webhook-mp] ✅ Reporte generado:', transactionId);
-}
-
-async function notifyWhatsApp(payment: Record<string, unknown>, productSlug: string) {
-  const accountSid = process.env.WHATSAPP_ACCOUNT_SID;
-  const authToken  = process.env.WHATSAPP_AUTH_TOKEN;
-  const fromNumber = process.env.WHATSAPP_FROM_NUMBER;
-  const toNumber   = process.env.WHATSAPP_NOTIFY_NUMBER;
-
-  if (!accountSid || !authToken || !fromNumber || !toNumber) {
-    console.warn('[webhook-mp] WhatsApp no configurado');
-    return;
-  }
-
-  const message = `✨ Nueva venta en Astral Evolution!\n\nProducto: ${productSlug}\nMonto: ${payment.transaction_amount} ${payment.currency_id}\nCliente: ${(payment.payer as Record<string, string>)?.email}`;
-
-  const res = await fetch(
-    `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({ From: fromNumber, To: toNumber, Body: message }).toString(),
-    }
-  );
-
-  if (res.ok) {
-    console.log('[webhook-mp] ✅ WhatsApp enviado');
-  } else {
-    console.error('[webhook-mp] Error WhatsApp:', await res.text());
-  }
-}
-
-function buildPrompt(slug: string, bd: Record<string, string>): string {
-  const base = `Nombre: ${bd.name}
-Fecha de nacimiento: ${bd.birth_date}
-Hora de nacimiento: ${bd.birth_time}
-Ciudad: ${bd.birth_city}, ${bd.birth_country}
-${bd.personal_context ? `Contexto personal: ${bd.personal_context}` : ''}`;
-
-  const prompts: Record<string, string> = {
-    'lectura-esencial': `Eres un astrólogo profesional. Genera una lectura astrológica esencial para:
-${base}
-Incluye: análisis de Sol, Luna y Ascendente, tránsitos del mes actual, recomendaciones prácticas.
-Escribe en español, tono cálido y profesional. Mínimo 500 palabras.`,
-    'consulta-evolutiva': `Eres un astrólogo evolutivo. Genera un dossier astrológico completo para:
-${base}
-Incluye: carta natal completa, aspectos planetarios, tránsitos del año, nodos lunares, plan de crecimiento.
-Escribe en español, tono profundo. Mínimo 1500 palabras.`,
-    'especial-parejas': `Eres astrólogo especialista en relaciones. Genera análisis de sinastría para:
-${base}
-Incluye: compatibilidad, fortalezas, desafíos, recomendaciones para armonizar.
-Escribe en español. Mínimo 1200 palabras.`,
+  let paymentDetails: {
+    status: string;
+    external_reference: string;
+    transaction_amount: number;
+    payer?: { email?: string; first_name?: string; last_name?: string };
   };
 
-  return prompts[slug] ?? prompts['lectura-esencial'];
+  try {
+    const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${mpPaymentId}`, {
+      headers: { Authorization: `Bearer ${mpToken}` },
+    });
+
+    if (!mpRes.ok) {
+      console.error('[Webhook MP] Error consultando pago:', mpRes.status);
+      return NextResponse.json({ error: 'Error consultando pago' }, { status: 500 });
+    }
+
+    paymentDetails = await mpRes.json();
+  } catch (err) {
+    console.error('[Webhook MP] Error de red consultando pago:', err);
+    return NextResponse.json({ error: 'Error de red' }, { status: 500 });
+  }
+
+  if (paymentDetails.status !== 'approved') {
+    console.log(`[Webhook MP] Pago no aprobado (${paymentDetails.status}), ignorando`);
+    return NextResponse.json({ received: true });
+  }
+
+  const transactionId = paymentDetails.external_reference;
+  if (!transactionId) {
+    console.error('[Webhook MP] No hay external_reference en el pago');
+    return NextResponse.json({ received: true });
+  }
+
+  // 6. Actualizar transacción en Supabase
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
+
+  const { data: updatedTx, error: updateError } = await supabase
+    .from('transactions')
+    .update({
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+      mp_payment_id: mpPaymentId,
+    })
+    .eq('id', transactionId)
+    .eq('status', 'pending') // Idempotencia: solo si estaba pendiente
+    .select('*, products(name_es, slug, base_price_usd), users(name, email)')
+    .single();
+
+  if (updateError) {
+    console.error('[Webhook MP] Error actualizando transacción:', updateError);
+    // No retornar error 500 — MP reintentaría
+    return NextResponse.json({ received: true });
+  }
+
+  if (!updatedTx) {
+    console.log('[Webhook MP] Transacción no encontrada o ya procesada (idempotente)');
+    return NextResponse.json({ received: true });
+  }
+
+  console.log(`[Webhook MP] Transacción ${transactionId} completada ✅`);
+
+  // 7. Crear registro de reporte pendiente
+  const { error: reportError } = await supabase.from('reports').insert({
+    transaction_id: transactionId,
+    status: 'pending',
+  });
+
+  if (reportError) {
+    console.error('[Webhook MP] Error creando registro de reporte:', reportError);
+  }
+
+  // 8. Disparar generación de reporte en background (fire-and-forget)
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://astralevolution.com';
+  fetch(`${appUrl}/api/generate-report`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ transactionId }),
+  }).catch((err) => console.error('[Webhook MP] Error disparando generación:', err));
+
+  // 9. Notificación WhatsApp
+  const productName = (updatedTx as any).products?.name_es ?? 'Producto desconocido';
+  const customerName = (updatedTx as any).users?.name ?? 'Cliente';
+  const customerEmail = (updatedTx as any).users?.email ?? '';
+  const amount = paymentDetails.transaction_amount;
+
+  sendWhatsAppNotification(productName, amount, customerName, customerEmail).catch((err) =>
+    console.error('[WhatsApp] Error enviando notificación:', err)
+  );
+
+  return NextResponse.json({ received: true, status: 'completed' });
 }

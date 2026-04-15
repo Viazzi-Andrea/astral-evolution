@@ -1,408 +1,252 @@
 /**
  * app/api/generate-report/route.ts
- * Astral Evolution — Generación de reporte astrológico completo
- *
- * Pipeline:
- *   1. Recibe birthData + productSlug validados con Zod
- *   2. Calcula la carta natal exacta con ephemeris.ts (algoritmos Meeus/VSOP87)
- *   3. Construye el prompt maestro estilo Greene/Arroyo/Sasportas
- *   4. Envía a Gemini 1.5 Flash con instrucción de sistema dedicada
- *   5. Sanitiza y devuelve el reporte
- *
- * ─── SECURITY LOGGING BLOCK ───────────────────────────────────────────────────
- *  [RPT][INFO]  → flujo normal
- *  [RPT][WARN]  → situación recuperable
- *  [RPT][ERROR] → fallo que interrumpe la generación
- *  [RPT][FATAL] → config rota
- * ─────────────────────────────────────────────────────────────────────────────
+ * Generación de reporte con Gemini 1.5 Flash + envío automático por email.
+ * Versión completa: genera → sanitiza → guarda en DB → envía email.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
+import { createClient } from '@supabase/supabase-js';
+import { GenerateReportSchema, sanitizeAIOutput } from '@/lib/validations/schemas';
+import { sendReportEmail } from '@/lib/email/send-report';
 
-import { calculateNatalChart, localToUTC } from '@/lib/astro/ephemeris';
-import type { BirthInput } from '@/lib/astro/ephemeris';
-import {
-  buildEssentialReadingPrompt,
-  buildEvolutionaryConsultationPrompt,
-  buildSynastryPrompt,
-} from '@/lib/astro/prompts';
-
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-
-type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'FATAL';
-
-// ════════════════════════════════════════════════════════════════
-//  SECURITY LOGGING BLOCK
-// ════════════════════════════════════════════════════════════════
-
-function rptLog(
-  level:    LogLevel,
-  reqId:    string,
-  message:  string,
-  context?: Record<string, unknown>
-): void {
-  const ts     = new Date().toISOString();
-  const prefix = `[RPT][${level}][${reqId}]`;
-  const ctx    = context ? ` | ${JSON.stringify(context)}` : '';
-  const line   = `${ts} ${prefix} ${message}${ctx}`;
-
-  if (level === 'INFO')                        console.info(line);
-  if (level === 'WARN')                        console.warn(line);
-  if (level === 'ERROR' || level === 'FATAL')  console.error(line);
-}
-
-function diagnoseGeminiError(
-  httpStatus: number,
-  errorBody:  { error?: { code?: number; message?: string; status?: string } },
-  reqId:      string
+// ─── Prompts por producto ─────────────────────────────────────────────────────
+function buildPrompt(
+  productSlug: string,
+  birthData: {
+    name: string;
+    birth_date: string;
+    birth_time: string;
+    birth_city: string;
+    birth_country: string;
+    personal_context?: string | null;
+  },
+  partnerData?: {
+    name: string;
+    birth_date: string;
+    birth_time: string;
+    birth_city: string;
+    birth_country: string;
+  } | null
 ): string {
-  const gc  = errorBody?.error?.code;
-  const gs  = errorBody?.error?.status ?? '';
-  const gm  = errorBody?.error?.message ?? '(sin mensaje)';
+  const mes = new Date().toLocaleString('es-ES', { month: 'long', year: 'numeric' });
 
-  rptLog('ERROR', reqId, `Gemini HTTP ${httpStatus}`, {
-    google_code: gc, google_status: gs, google_message: gm,
-  });
+  const base = `
+Nombre: ${birthData.name}
+Fecha de nacimiento: ${birthData.birth_date}
+Hora de nacimiento: ${birthData.birth_time}
+Ciudad: ${birthData.birth_city}, ${birthData.birth_country}
+${birthData.personal_context ? `Contexto personal: ${birthData.personal_context}` : ''}
+  `.trim();
 
-  if (httpStatus === 400 && gs === 'FAILED_PRECONDITION')
-    return 'Modelo no disponible: verifica billing en Google Cloud Console.';
-  if (httpStatus === 400)
-    return `Petición malformada a Gemini: ${gm}`;
-  if (httpStatus === 403)
-    return 'API Key sin permisos. Habilita "Generative Language API" en Google Cloud Console.';
-  if (httpStatus === 429)
-    return 'Quota de Gemini agotada. Revisa límites en Google Cloud Console.';
-  if (httpStatus === 503)
-    return 'Servicio Gemini no disponible. Reintenta en unos minutos.';
-  return `Error de Gemini (HTTP ${httpStatus}): ${gm}`;
-}
+  if (productSlug === 'lectura-esencial') {
+    return `Eres un astrólogo profesional experto en astrología evolutiva. Genera una Lectura Esencial personalizada para:
 
-// ════════════════════════════════════════════════════════════════
-//  FIN SECURITY LOGGING BLOCK
-// ════════════════════════════════════════════════════════════════
+${base}
 
-// ─── Schemas de validación (Zod) ─────────────────────────────────────────────
+Incluye:
+**Sol, Luna y Ascendente** — Las tres luminarias principales y su expresión en la personalidad.
+**Tránsitos de ${mes}** — Qué energías están activas y cómo aprovecharlas.
+**3 Recomendaciones concretas** — Acciones específicas alineadas con la energía actual.
 
-const BirthDataSchema = z.object({
-  name:            z.string().min(1).max(100),
-  birthDate:       z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato: YYYY-MM-DD'),
-  birthTime:       z.string().regex(/^\d{2}:\d{2}$/, 'Formato: HH:MM'),
-  birthCity:       z.string().min(1).max(100),
-  birthCountry:    z.string().min(1).max(100),
-  latitude:        z.number().min(-90).max(90),
-  longitude:       z.number().min(-180).max(180),
-  tzOffsetMinutes: z.number().int().min(-840).max(840).default(0),
-  personalContext: z.string().max(500).optional(),
-});
-
-const RequestSchema = z.object({
-  productSlug:     z.enum(['lectura-esencial', 'consulta-evolutiva', 'especial-parejas']),
-  birthData:       BirthDataSchema,
-  partnerBirthData: BirthDataSchema.optional(),
-});
-
-// ─── Sanitización de la salida de Gemini ─────────────────────────────────────
-//
-//  Gemini puede devolver markdown. Eliminamos cualquier secuencia
-//  que pueda interpretarse como HTML/script en el cliente.
-//  (La sanitización completa ocurre también en el frontend con DOMPurify.)
-
-function sanitizeReportOutput(text: string): string {
-  return text
-    // Eliminar cualquier tag HTML
-    .replace(/<[^>]*>/g, '')
-    // Eliminar secuencias de script inline
-    .replace(/javascript:/gi, '')
-    .replace(/on\w+\s*=/gi, '')
-    // Normalizar saltos de línea
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
-    // Eliminar líneas vacías excesivas (más de 2 consecutivas)
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
-// ─── Construcción de BirthInput para el motor de efemérides ──────────────────
-
-function parseBirthData(data: z.infer<typeof BirthDataSchema>): BirthInput {
-  const [year, month, day] = data.birthDate.split('-').map(Number);
-  const [hour, minute]     = data.birthTime.split(':').map(Number);
-
-  // Convertir hora local a UTC
-  const utc = localToUTC(year, month, day, hour, minute, data.tzOffsetMinutes);
-
-  return {
-    year:      utc.year,
-    month:     utc.month,
-    day:       utc.day,
-    hour:      utc.hour,
-    minute:    utc.minute,
-    latitude:  data.latitude,
-    longitude: data.longitude,
-  };
-}
-
-// ─── Llamada a Gemini ─────────────────────────────────────────────────────────
-
-async function callGemini(
-  systemInstruction: string,
-  userPrompt:        string,
-  reqId:             string
-): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
-
-  if (!apiKey || apiKey.length < 20) {
-    rptLog('FATAL', reqId, 'GEMINI_API_KEY ausente o inválida');
-    throw new Error('Servicio de IA no disponible');
+Extensión: 4-6 párrafos bien desarrollados. Usa **negritas** para los títulos de sección. No uses HTML ni markdown complejo. Tono: profundo, inspirador y accesible.`;
   }
 
-  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  if (productSlug === 'consulta-evolutiva') {
+    return `Eres un astrólogo profesional experto en astrología evolutiva y karmica. Genera una Consulta Evolutiva completa para:
 
-  rptLog('INFO', reqId, 'Enviando carta natal a Gemini 1.5 Flash', {
-    system_chars: systemInstruction.length,
-    prompt_chars: userPrompt.length,
-    model:        'gemini-1.5-flash',
-  });
+${base}
 
-  const startMs = Date.now();
+Incluye:
+**Carta Natal** — Sol, Luna, Ascendente y planetas personales (Mercurio, Venus, Marte, Júpiter, Saturno).
+**Las Casas Clave** — Las 3-4 casas más activadas y su mensaje evolutivo.
+**Aspectos Planetarios Principales** — Las configuraciones más significativas.
+**Nodos Lunares** — Nodo Norte (misión del alma) y Nodo Sur (karma a soltar).
+**Quirón** — La herida primordial y el camino de sanación.
+**Tránsitos Importantes del Año** — Saturno, Júpiter y planetas lentos.
+**Revolución Solar** — El foco del año en curso.
+**Plan de Crecimiento** — 5 áreas de trabajo y recomendaciones específicas.
 
-  let res: Response;
-  try {
-    res = await fetch(GEMINI_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        // system_instruction es el parámetro correcto en v1beta para Gemini 1.5
-        system_instruction: {
-          parts: [{ text: systemInstruction }],
-        },
-        contents: [
-          {
-            role:  'user',
-            parts: [{ text: userPrompt }],
-          },
-        ],
-        generationConfig: {
-          temperature:     0.82,   // Creatividad alta pero controlada
-          maxOutputTokens: 4096,   // Suficiente para reportes completos
-          topP:            0.94,
-          topK:            40,
-        },
-        safetySettings: [
-          { category: 'HARM_CATEGORY_HARASSMENT',        threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH',       threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-        ],
-      }),
-    });
-  } catch (netErr) {
-    rptLog('ERROR', reqId, 'Error de red hacia Gemini', {
-      error: netErr instanceof Error ? netErr.message : String(netErr),
-    });
-    throw new Error('Error de conectividad con el servicio de IA');
+Extensión: 12-15 párrafos profundos. Usa **negritas** para los títulos. Tono: transformador y evolutivo.`;
   }
 
-  const latency = Date.now() - startMs;
+  if (productSlug === 'especial-parejas' && partnerData) {
+    return `Eres un astrólogo especializado en sinastría y astrología relacional. Genera un Especial Parejas para:
+
+**PERSONA 1:**
+${base}
+
+**PERSONA 2:**
+Nombre: ${partnerData.name}
+Fecha: ${partnerData.birth_date}
+Hora: ${partnerData.birth_time}
+Ciudad: ${partnerData.birth_city}, ${partnerData.birth_country}
+
+Incluye:
+**Compatibilidad Esencial** — Sol, Luna y Ascendente de ambos y su dinámica.
+**Sinastría** — Los 5-7 aspectos interplanetarios más significativos.
+**Casas Activadas** — Qué activa cada uno en la carta del otro.
+**Fortalezas de la Pareja** — Los 3 mayores dones compartidos.
+**Desafíos y Crecimiento** — 3 áreas de fricción y cómo trabajarlas conscientemente.
+**Propósito Conjunto** — La misión evolutiva de esta relación.
+**5 Prácticas Recomendadas** — Acciones concretas para fortalecer el vínculo.
+
+Extensión: 14-18 párrafos. Usa **negritas** para títulos. Tono: revelador, compasivo y orientado al crecimiento.`;
+  }
+
+  return `Genera un análisis astrológico personalizado para ${birthData.name}, nacido/a el ${birthData.birth_date} a las ${birthData.birth_time} en ${birthData.birth_city}, ${birthData.birth_country}. Sé profundo y evolutivo.`;
+}
+
+// ─── Llamada a Gemini con limpieza de key ─────────────────────────────────────
+async function callGemini(prompt: string): Promise<string> {
+  // Limpia saltos de línea invisibles — bug conocido con echo en Vercel CLI
+  const apiKey = process.env.GEMINI_API_KEY?.replace(/[\r\n\s]/g, '');
+  if (!apiKey) throw new Error('GEMINI_API_KEY no configurada');
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.8,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 4096,
+      },
+      safetySettings: [
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+      ],
+    }),
+  });
 
   if (!res.ok) {
-    let errBody: { error?: { code?: number; message?: string; status?: string } } = {};
-    try { errBody = await res.json(); } catch { /* ignorar */ }
-    const msg = diagnoseGeminiError(res.status, errBody, reqId);
-    throw new Error(msg);
+    const err = await res.text();
+    throw new Error(`Gemini ${res.status}: ${err}`);
   }
 
-  let data: {
-    candidates?: Array<{
-      content?:     { parts?: Array<{ text?: string }> };
-      finishReason?: string;
-      safetyRatings?: Array<{ category: string; probability: string }>;
-    }>;
-    promptFeedback?: { blockReason?: string };
-  };
-
-  try {
-    data = await res.json();
-  } catch {
-    rptLog('ERROR', reqId, 'Respuesta de Gemini no es JSON válido');
-    throw new Error('Respuesta inesperada del servicio de IA');
-  }
-
-  if (data.promptFeedback?.blockReason) {
-    rptLog('WARN', reqId, 'Prompt bloqueado por Gemini', {
-      block_reason: data.promptFeedback.blockReason,
-    });
-    throw new Error(`Contenido bloqueado: ${data.promptFeedback.blockReason}`);
-  }
-
-  const candidate = data.candidates?.[0];
-
-  if (!candidate?.content && candidate?.finishReason === 'SAFETY') {
-    rptLog('WARN', reqId, 'Respuesta filtrada por safety mid-generation', {
-      safety_ratings: candidate?.safetyRatings,
-    });
-    throw new Error('La respuesta fue filtrada por los sistemas de seguridad. Reintenta.');
-  }
-
-  const text = candidate?.content?.parts?.[0]?.text;
-  if (!text) {
-    rptLog('ERROR', reqId, 'Respuesta sin texto — estructura inesperada', {
-      finish_reason:    candidate?.finishReason,
-      candidates_count: data.candidates?.length,
-    });
-    throw new Error('Respuesta vacía de Gemini');
-  }
-
-  rptLog('INFO', reqId, '✅ Reporte generado por Gemini', {
-    finish_reason: candidate.finishReason,
-    output_chars:  text.length,
-    latency_ms:    latency,
-  });
-
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('Gemini no retornó texto');
   return text;
 }
 
-// ─── Handler principal ────────────────────────────────────────────────────────
-
+// ─── Handler ──────────────────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
-  const reqId = Math.random().toString(36).slice(2, 9).toUpperCase();
-
-  rptLog('INFO', reqId, 'Solicitud de generación de reporte recibida');
-
-  // Parsear body
-  let raw: unknown;
-  try { raw = await request.json(); }
-  catch {
-    return NextResponse.json({ error: 'JSON inválido', reqId }, { status: 400 });
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
   }
 
-  // Validar con Zod
-  const parsed = RequestSchema.safeParse(raw);
+  const parsed = GenerateReportSchema.safeParse(body);
   if (!parsed.success) {
-    rptLog('WARN', reqId, 'Datos de entrada inválidos', {
-      errors: parsed.error.flatten(),
-    });
-    return NextResponse.json(
-      { error: 'Datos inválidos', details: parsed.error.flatten(), reqId },
-      { status: 422 }
-    );
+    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 422 });
   }
 
-  const { productSlug, birthData, partnerBirthData } = parsed.data;
+  const { transactionId } = parsed.data;
 
-  // ── PASO 1: Calcular carta natal con el motor de efemérides ────────────────
-  let chart1;
-  let chart2;
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
+
+  // Marcar como "generating"
+  await supabase
+    .from('reports')
+    .update({ status: 'generating' })
+    .eq('transaction_id', transactionId);
 
   try {
-    rptLog('INFO', reqId, 'Calculando carta natal con algoritmos Meeus/VSOP87', {
-      subject: birthData.name,
-      date:    birthData.birthDate,
-      coords:  `${birthData.latitude}, ${birthData.longitude}`,
-    });
+    // Obtener transacción con todos los datos necesarios
+    const { data: tx, error: txError } = await supabase
+      .from('transactions')
+      .select(`
+        *,
+        products(slug, name_es),
+        birth_data!transactions_birth_data_id_fkey(
+          name, birth_date, birth_time, birth_city, birth_country, personal_context
+        ),
+        partner_birth_data:birth_data!transactions_partner_birth_data_id_fkey(
+          name, birth_date, birth_time, birth_city, birth_country
+        ),
+        users(name, email)
+      `)
+      .eq('id', transactionId)
+      .eq('status', 'completed')
+      .single();
 
-    const birthInput1 = parseBirthData(birthData);
-    chart1 = calculateNatalChart(birthInput1);
+    if (txError || !tx) {
+      throw new Error(`Transacción no encontrada o no completada`);
+    }
 
-    rptLog('INFO', reqId, 'Carta natal calculada ✓', {
-      sun:  `${chart1.chartSummary.sunSign}`,
-      moon: `${chart1.chartSummary.moonSign}`,
-      asc:  `${chart1.chartSummary.ascendantSign}`,
-      jd:   chart1.julianDay.toFixed(4),
-      aspects_found: chart1.aspects.length,
-    });
+    const productSlug = (tx as any).products?.slug;
+    const productName = (tx as any).products?.name_es ?? 'Lectura Astrológica';
+    const birthData = (tx as any).birth_data;
+    const partnerData = (tx as any).partner_birth_data ?? null;
+    const userEmail = (tx as any).users?.email;
+    const userName = (tx as any).users?.name ?? birthData?.name;
 
-    if (productSlug === 'especial-parejas' && partnerBirthData) {
-      const birthInput2 = parseBirthData(partnerBirthData);
-      chart2 = calculateNatalChart(birthInput2);
-      rptLog('INFO', reqId, 'Carta natal de pareja calculada ✓', {
-        subject: partnerBirthData.name,
-        sun:     `${chart2.chartSummary.sunSign}`,
+    if (!birthData) throw new Error('Datos de nacimiento no encontrados');
+
+    // Generar reporte con Gemini
+    const prompt = buildPrompt(productSlug, birthData, partnerData);
+    const rawText = await callGemini(prompt);
+
+    // Sanitizar ANTES de guardar
+    const sanitizedText = sanitizeAIOutput(rawText);
+
+    // Guardar en DB
+    await supabase
+      .from('reports')
+      .update({
+        status: 'completed',
+        ai_response: sanitizedText,
+        generated_at: new Date().toISOString(),
+      })
+      .eq('transaction_id', transactionId);
+
+    console.log(`[GenerateReport] ✅ Reporte generado para ${transactionId}`);
+
+    // Enviar email si tenemos la dirección
+    if (userEmail) {
+      const emailResult = await sendReportEmail({
+        toEmail: userEmail,
+        toName: userName,
+        productName,
+        reportContent: sanitizedText,
+        transactionId,
       });
+
+      if (emailResult.success) {
+        // Marcar como enviado
+        await supabase
+          .from('reports')
+          .update({ sent_at: new Date().toISOString() })
+          .eq('transaction_id', transactionId);
+        console.log(`[GenerateReport] ✅ Email enviado a ${userEmail}`);
+      } else {
+        console.error(`[GenerateReport] ⚠️ Email falló:`, emailResult.error);
+      }
     }
 
-  } catch (calcErr) {
-    rptLog('ERROR', reqId, 'Error en cálculo de efemérides', {
-      error: calcErr instanceof Error ? calcErr.message : String(calcErr),
-    });
-    return NextResponse.json(
-      { error: 'Error calculando la carta natal', reqId },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: true, transactionId });
+
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Error desconocido';
+    console.error('[GenerateReport] ❌', msg);
+
+    await supabase
+      .from('reports')
+      .update({ status: 'failed', error_message: msg })
+      .eq('transaction_id', transactionId);
+
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
-
-  // ── PASO 2: Construir el prompt maestro ────────────────────────────────────
-  let systemInstruction: string;
-  let userPrompt: string;
-
-  try {
-    if (productSlug === 'lectura-esencial') {
-      ({ systemInstruction, userPrompt } = buildEssentialReadingPrompt(
-        chart1, birthData.name, birthData.personalContext
-      ));
-    } else if (productSlug === 'consulta-evolutiva') {
-      ({ systemInstruction, userPrompt } = buildEvolutionaryConsultationPrompt(
-        chart1, birthData.name, birthData.personalContext
-      ));
-    } else if (productSlug === 'especial-parejas' && chart2 && partnerBirthData) {
-      ({ systemInstruction, userPrompt } = buildSynastryPrompt(
-        chart1, birthData.name,
-        chart2, partnerBirthData.name
-      ));
-    } else {
-      return NextResponse.json(
-        { error: 'Producto requiere datos de pareja', reqId },
-        { status: 400 }
-      );
-    }
-
-    rptLog('INFO', reqId, 'Prompt construido ✓', {
-      product:      productSlug,
-      prompt_chars: userPrompt.length,
-    });
-
-  } catch (promptErr) {
-    rptLog('ERROR', reqId, 'Error construyendo el prompt', {
-      error: promptErr instanceof Error ? promptErr.message : String(promptErr),
-    });
-    return NextResponse.json(
-      { error: 'Error construyendo el reporte', reqId },
-      { status: 500 }
-    );
-  }
-
-  // ── PASO 3: Llamar a Gemini y sanitizar salida ─────────────────────────────
-  let rawReport: string;
-  try {
-    rawReport = await callGemini(systemInstruction, userPrompt, reqId);
-  } catch (geminiErr) {
-    return NextResponse.json(
-      {
-        error:  geminiErr instanceof Error ? geminiErr.message : 'Error del servicio de IA',
-        reqId,
-      },
-      { status: 500 }
-    );
-  }
-
-  const report = sanitizeReportOutput(rawReport);
-
-  rptLog('INFO', reqId, '✅ Reporte final listo para entrega', {
-    final_chars: report.length,
-    product:     productSlug,
-  });
-
-  return NextResponse.json({
-    success:  true,
-    report,
-    reqId,
-    meta: {
-      product:  productSlug,
-      subject:  birthData.name,
-      sunSign:  chart1.chartSummary.sunSign,
-      moonSign: chart1.chartSummary.moonSign,
-      ascSign:  chart1.chartSummary.ascendantSign,
-    },
-  });
 }
