@@ -67,6 +67,7 @@ export const CheckoutRequestSchema = z.object({
   }),
   birthData: BirthDataSchema,
   partnerBirthData: PartnerBirthDataSchema.optional().nullable(),
+  discountCode: z.string().optional().nullable(),
   countryCode: z
     .string()
     .length(2, 'Código de país inválido')
