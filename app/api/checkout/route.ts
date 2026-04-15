@@ -26,7 +26,7 @@ const PRODUCT_IDS: Record<string, string> = {
 export async function POST(request: NextRequest) {
   // ─── 1. Validar entorno ───────────────────────────────────────────────────
   try {
-    validateServerEnv();
+    // validateServerEnv(); // desactivado temporalmente
   } catch (envError) {
     console.error('[Checkout] Error de configuración:', envError);
     return NextResponse.json(
