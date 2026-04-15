@@ -1,7 +1,7 @@
-/**
+﻿/**
  * app/api/generate-report/route.ts
- * Generación de reporte con Gemini 1.5 Flash + envío automático por email.
- * Versión completa: genera → sanitiza → guarda en DB → envía email.
+ * GeneraciÃ³n de reporte con Gemini 1.5 Flash + envÃ­o automÃ¡tico por email.
+ * VersiÃ³n completa: genera â†’ sanitiza â†’ guarda en DB â†’ envÃ­a email.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -9,7 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 import { GenerateReportSchema, sanitizeAIOutput } from '@/lib/validations/schemas';
 import { sendReportEmail } from '@/lib/email/send-report';
 
-// ─── Prompts por producto ─────────────────────────────────────────────────────
+// â”€â”€â”€ Prompts por producto â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function buildPrompt(
   productSlug: string,
   birthData: {
@@ -39,38 +39,38 @@ ${birthData.personal_context ? `Contexto personal: ${birthData.personal_context}
   `.trim();
 
   if (productSlug === 'lectura-esencial') {
-    return `Eres un astrólogo profesional experto en astrología evolutiva. Genera una Lectura Esencial personalizada para:
+    return `Eres un astrÃ³logo profesional experto en astrologÃ­a evolutiva. Genera una Lectura Esencial personalizada para:
 
 ${base}
 
 Incluye:
-**Sol, Luna y Ascendente** — Las tres luminarias principales y su expresión en la personalidad.
-**Tránsitos de ${mes}** — Qué energías están activas y cómo aprovecharlas.
-**3 Recomendaciones concretas** — Acciones específicas alineadas con la energía actual.
+**Sol, Luna y Ascendente** â€” Las tres luminarias principales y su expresiÃ³n en la personalidad.
+**TrÃ¡nsitos de ${mes}** â€” QuÃ© energÃ­as estÃ¡n activas y cÃ³mo aprovecharlas.
+**3 Recomendaciones concretas** â€” Acciones especÃ­ficas alineadas con la energÃ­a actual.
 
-Extensión: 4-6 párrafos bien desarrollados. Usa **negritas** para los títulos de sección. No uses HTML ni markdown complejo. Tono: profundo, inspirador y accesible.`;
+ExtensiÃ³n: 4-6 pÃ¡rrafos bien desarrollados. Usa **negritas** para los tÃ­tulos de secciÃ³n. No uses HTML ni markdown complejo. Tono: profundo, inspirador y accesible.`;
   }
 
   if (productSlug === 'consulta-evolutiva') {
-    return `Eres un astrólogo profesional experto en astrología evolutiva y karmica. Genera una Consulta Evolutiva completa para:
+    return `Eres un astrÃ³logo profesional experto en astrologÃ­a evolutiva y karmica. Genera una Consulta Evolutiva completa para:
 
 ${base}
 
 Incluye:
-**Carta Natal** — Sol, Luna, Ascendente y planetas personales (Mercurio, Venus, Marte, Júpiter, Saturno).
-**Las Casas Clave** — Las 3-4 casas más activadas y su mensaje evolutivo.
-**Aspectos Planetarios Principales** — Las configuraciones más significativas.
-**Nodos Lunares** — Nodo Norte (misión del alma) y Nodo Sur (karma a soltar).
-**Quirón** — La herida primordial y el camino de sanación.
-**Tránsitos Importantes del Año** — Saturno, Júpiter y planetas lentos.
-**Revolución Solar** — El foco del año en curso.
-**Plan de Crecimiento** — 5 áreas de trabajo y recomendaciones específicas.
+**Carta Natal** â€” Sol, Luna, Ascendente y planetas personales (Mercurio, Venus, Marte, JÃºpiter, Saturno).
+**Las Casas Clave** â€” Las 3-4 casas mÃ¡s activadas y su mensaje evolutivo.
+**Aspectos Planetarios Principales** â€” Las configuraciones mÃ¡s significativas.
+**Nodos Lunares** â€” Nodo Norte (misiÃ³n del alma) y Nodo Sur (karma a soltar).
+**QuirÃ³n** â€” La herida primordial y el camino de sanaciÃ³n.
+**TrÃ¡nsitos Importantes del AÃ±o** â€” Saturno, JÃºpiter y planetas lentos.
+**RevoluciÃ³n Solar** â€” El foco del aÃ±o en curso.
+**Plan de Crecimiento** â€” 5 Ã¡reas de trabajo y recomendaciones especÃ­ficas.
 
-Extensión: 12-15 párrafos profundos. Usa **negritas** para los títulos. Tono: transformador y evolutivo.`;
+ExtensiÃ³n: 12-15 pÃ¡rrafos profundos. Usa **negritas** para los tÃ­tulos. Tono: transformador y evolutivo.`;
   }
 
   if (productSlug === 'especial-parejas' && partnerData) {
-    return `Eres un astrólogo especializado en sinastría y astrología relacional. Genera un Especial Parejas para:
+    return `Eres un astrÃ³logo especializado en sinastrÃ­a y astrologÃ­a relacional. Genera un Especial Parejas para:
 
 **PERSONA 1:**
 ${base}
@@ -82,23 +82,23 @@ Hora: ${partnerData.birth_time}
 Ciudad: ${partnerData.birth_city}, ${partnerData.birth_country}
 
 Incluye:
-**Compatibilidad Esencial** — Sol, Luna y Ascendente de ambos y su dinámica.
-**Sinastría** — Los 5-7 aspectos interplanetarios más significativos.
-**Casas Activadas** — Qué activa cada uno en la carta del otro.
-**Fortalezas de la Pareja** — Los 3 mayores dones compartidos.
-**Desafíos y Crecimiento** — 3 áreas de fricción y cómo trabajarlas conscientemente.
-**Propósito Conjunto** — La misión evolutiva de esta relación.
-**5 Prácticas Recomendadas** — Acciones concretas para fortalecer el vínculo.
+**Compatibilidad Esencial** â€” Sol, Luna y Ascendente de ambos y su dinÃ¡mica.
+**SinastrÃ­a** â€” Los 5-7 aspectos interplanetarios mÃ¡s significativos.
+**Casas Activadas** â€” QuÃ© activa cada uno en la carta del otro.
+**Fortalezas de la Pareja** â€” Los 3 mayores dones compartidos.
+**DesafÃ­os y Crecimiento** â€” 3 Ã¡reas de fricciÃ³n y cÃ³mo trabajarlas conscientemente.
+**PropÃ³sito Conjunto** â€” La misiÃ³n evolutiva de esta relaciÃ³n.
+**5 PrÃ¡cticas Recomendadas** â€” Acciones concretas para fortalecer el vÃ­nculo.
 
-Extensión: 14-18 párrafos. Usa **negritas** para títulos. Tono: revelador, compasivo y orientado al crecimiento.`;
+ExtensiÃ³n: 14-18 pÃ¡rrafos. Usa **negritas** para tÃ­tulos. Tono: revelador, compasivo y orientado al crecimiento.`;
   }
 
-  return `Genera un análisis astrológico personalizado para ${birthData.name}, nacido/a el ${birthData.birth_date} a las ${birthData.birth_time} en ${birthData.birth_city}, ${birthData.birth_country}. Sé profundo y evolutivo.`;
+  return `Genera un anÃ¡lisis astrolÃ³gico personalizado para ${birthData.name}, nacido/a el ${birthData.birth_date} a las ${birthData.birth_time} en ${birthData.birth_city}, ${birthData.birth_country}. SÃ© profundo y evolutivo.`;
 }
 
-// ─── Llamada a Gemini con limpieza de key ─────────────────────────────────────
+// â”€â”€â”€ Llamada a Gemini con limpieza de key â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function callGemini(prompt: string): Promise<string> {
-  // Limpia saltos de línea invisibles — bug conocido con echo en Vercel CLI
+  // Limpia saltos de lÃ­nea invisibles â€” bug conocido con echo en Vercel CLI
   const apiKey = process.env.GEMINI_API_KEY?.replace(/[\r\n\s]/g, '');
   if (!apiKey) throw new Error('GEMINI_API_KEY no configurada');
 
@@ -131,17 +131,17 @@ async function callGemini(prompt: string): Promise<string> {
 
   const data = await res.json();
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Gemini no retornó texto');
+  if (!text) throw new Error('Gemini no retornÃ³ texto');
   return text;
 }
 
-// ─── Handler ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function POST(request: NextRequest) {
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
+    return NextResponse.json({ error: 'JSON invÃ¡lido' }, { status: 400 });
   }
 
   const parsed = GenerateReportSchema.safeParse(body);
@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
     .eq('transaction_id', transactionId);
 
   try {
-    // Obtener transacción con todos los datos necesarios
+    // Obtener transacciÃ³n con todos los datos necesarios
     const { data: tx, error: txError } = await supabase
       .from('transactions')
       .select(`
@@ -183,11 +183,11 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (txError || !tx) {
-      throw new Error(`Transacción no encontrada o no completada`);
+      throw new Error(`TransacciÃ³n no encontrada o no completada`);
     }
 
     const productSlug = (tx as any).products?.slug;
-    const productName = (tx as any).products?.name_es ?? 'Lectura Astrológica';
+    const productName = (tx as any).products?.name_es ?? 'Lectura AstrolÃ³gica';
     const birthData = (tx as any).birth_data;
     const partnerData = (tx as any).partner_birth_data ?? null;
     const userEmail = (tx as any).users?.email;
@@ -212,12 +212,12 @@ export async function POST(request: NextRequest) {
       })
       .eq('transaction_id', transactionId);
 
-    console.log(`[GenerateReport] ✅ Reporte generado para ${transactionId}`);
+    console.log(`[GenerateReport] âœ… Reporte generado para ${transactionId}`);
 
-    // Enviar email si tenemos la dirección
+    // Enviar email si tenemos la direcciÃ³n
     if (userEmail) {
       const emailResult = await sendReportEmail({
-        toEmail: userEmail,
+        toEmail: userEmail,`n        productSlug: productSlug,
         toName: userName,
         productName,
         reportContent: sanitizedText,
@@ -230,9 +230,9 @@ export async function POST(request: NextRequest) {
           .from('reports')
           .update({ sent_at: new Date().toISOString() })
           .eq('transaction_id', transactionId);
-        console.log(`[GenerateReport] ✅ Email enviado a ${userEmail}`);
+        console.log(`[GenerateReport] âœ… Email enviado a ${userEmail}`);
       } else {
-        console.error(`[GenerateReport] ⚠️ Email falló:`, emailResult.error);
+        console.error(`[GenerateReport] âš ï¸ Email fallÃ³:`, emailResult.error);
       }
     }
 
@@ -240,7 +240,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Error desconocido';
-    console.error('[GenerateReport] ❌', msg);
+    console.error('[GenerateReport] âŒ', msg);
 
     await supabase
       .from('reports')
