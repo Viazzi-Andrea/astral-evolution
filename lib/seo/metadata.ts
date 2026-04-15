@@ -186,7 +186,7 @@ export function getBaseMetadata(region: keyof typeof SEO_BY_REGION = 'default'):
       template: seo.titleTemplate,
     },
     description: seo.description,
-    keywords: seo.keywords,
+    keywords: [...seo.keywords],
     authors: [{ name: 'Astral Evolution', url: BASE_URL }],
     creator: 'Astral Evolution',
     publisher: 'Astral Evolution',
