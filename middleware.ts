@@ -34,9 +34,7 @@ function checkRateLimit(
 // ─── Clean expired entries every 5 minutes ───
 setInterval(() => {
   const now = Date.now();
-  for (const [key, value] of rateLimitStore.entries()) {
-    if (now > value.resetAt) rateLimitStore.delete(key);
-  }
+  rateLimitStore.forEach((value, key) => { if (now > value.resetAt) rateLimitStore.delete(key); });
 }, 5 * 60 * 1000);
 
 export function middleware(request: NextRequest) {
