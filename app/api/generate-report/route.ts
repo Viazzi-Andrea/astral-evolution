@@ -218,7 +218,7 @@ export async function POST(request: NextRequest) {
     if (userEmail) {
       const emailResult = await sendReportEmail({
         toEmail: userEmail,
-        productSlug: productSlug,`n        productSlug: productSlug,
+        productSlug: productSlug,
         toName: userName,
         productName,
         reportContent: sanitizedText,
