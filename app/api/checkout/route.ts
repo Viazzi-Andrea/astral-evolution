@@ -1,7 +1,7 @@
-/**
+﻿/**
  * app/api/checkout/route.ts
- * Checkout con Mercado Pago — reemplaza completamente Paddle.
- * Crea usuario, birth_data y transacción en Supabase, luego genera la URL de pago de MP.
+ * Checkout con Mercado Pago â€” reemplaza completamente Paddle.
+ * Crea usuario, birth_data y transacciÃ³n en Supabase, luego genera la URL de pago de MP.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -9,14 +9,14 @@ import { createClient } from '@supabase/supabase-js';
 import { CheckoutRequestSchema, validateServerEnv } from '@/lib/validations/schemas';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 
-// ─── Precios reales por producto ──────────────────────────────────────────────
+// â”€â”€â”€ Precios reales por producto â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PRODUCT_PRICES: Record<string, { amount: number; title: string }> = {
-  'lectura-esencial': { amount: 10.5, title: 'Lectura Esencial — Astral Evolution' },
-  'consulta-evolutiva': { amount: 26.6, title: 'Consulta Evolutiva — Astral Evolution' },
-  'especial-parejas': { amount: 38.5, title: 'Especial Parejas — Astral Evolution' },
+  'lectura-esencial': { amount: 10.5, title: 'Lectura Esencial â€” Astral Evolution' },
+  'consulta-evolutiva': { amount: 26.6, title: 'Consulta Evolutiva â€” Astral Evolution' },
+  'especial-parejas': { amount: 38.5, title: 'Especial Parejas â€” Astral Evolution' },
 };
 
-// ─── IDs de productos en Supabase (hardcoded como fallback seguro) ────────────
+// â”€â”€â”€ IDs de productos en Supabase (hardcoded como fallback seguro) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PRODUCT_IDS: Record<string, string> = {
   'lectura-esencial': '5ae9b326-62fb-4833-b12c-acb0a34a37e3',
   'consulta-evolutiva': '585f34fd-a14e-45f1-9e76-cb5811c31373',
@@ -24,23 +24,23 @@ const PRODUCT_IDS: Record<string, string> = {
 };
 
 export async function POST(request: NextRequest) {
-  // ─── 1. Validar entorno ───────────────────────────────────────────────────
+  // â”€â”€â”€ 1. Validar entorno â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   try {
     // validateServerEnv(); // desactivado temporalmente
   } catch (envError) {
-    console.error('[Checkout] Error de configuración:', envError);
+    console.error('[Checkout] Error de configuraciÃ³n:', envError);
     return NextResponse.json(
-      { error: 'Error de configuración del servidor. Contacta al administrador.' },
+      { error: 'Error de configuraciÃ³n del servidor. Contacta al administrador.' },
       { status: 500 }
     );
   }
 
-  // ─── 2. Parsear y validar input con Zod ──────────────────────────────────
+  // â”€â”€â”€ 2. Parsear y validar input con Zod â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: 'JSON inválido en el cuerpo de la petición.' }, { status: 400 });
+    return NextResponse.json({ error: 'JSON invÃ¡lido en el cuerpo de la peticiÃ³n.' }, { status: 400 });
   }
 
   const parsed = CheckoutRequestSchema.safeParse(body);
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 
   const { productSlug, birthData, partnerBirthData, countryCode, discountCode } = parsed.data;
 
-  // ─── 3. Verificar que el producto requiere partner data si aplica ──────────
+  // â”€â”€â”€ 3. Verificar que el producto requiere partner data si aplica â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (productSlug === 'especial-parejas' && !partnerBirthData) {
     return NextResponse.json(
       { error: 'Se requieren los datos de nacimiento de la pareja para este producto.' },
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Producto no encontrado.' }, { status: 404 });
   }
 
-  // ─── 4. Inicializar clientes ─────────────────────────────────────────────
+  // â”€â”€â”€ 4. Inicializar clientes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
   const preference = new Preference(mp);
 
   try {
-    // ─── 5. Upsert de usuario ─────────────────────────────────────────────
+    // â”€â”€â”€ 5. Upsert de usuario â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const { data: user, error: userError } = await supabase
       .from('users')
       .upsert(
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ─── 6. Insertar birth_data principal ────────────────────────────────
+    // â”€â”€â”€ 6. Insertar birth_data principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const { data: birthRecord, error: birthError } = await supabase
       .from('birth_data')
       .insert({
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ─── 7. Insertar birth_data de la pareja (si aplica) ─────────────────
+    // â”€â”€â”€ 7. Insertar birth_data de la pareja (si aplica) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     let partnerBirthId: string | null = null;
     if (partnerBirthData) {
       const { data: partnerRecord, error: partnerError } = await supabase
@@ -145,13 +145,13 @@ export async function POST(request: NextRequest) {
 
       if (partnerError) {
         console.error('[Checkout] Error insertar partner birth_data:', partnerError);
-        // No fatal — continuar sin partner
+        // No fatal â€” continuar sin partner
       } else {
         partnerBirthId = partnerRecord?.id ?? null;
       }
     }
 
-    // ─── 8. Crear transacción pendiente en Supabase ───────────────────────
+    // â”€â”€â”€ 8. Crear transacciÃ³n pendiente en Supabase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const DISCOUNT_CODES: Record<string,number> = { PRUEBA100: 100, ASTRAL50: 50, CUMPLE: 20 };
     const discountPct = discountCode ? (DISCOUNT_CODES[String(discountCode).toUpperCase()] || 0) : 0;
     const finalAmount = discountPct === 100 ? 0.01 : Math.round(productPrice.amount * (1 - discountPct / 100) * 100) / 100;
@@ -171,15 +171,15 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (txError || !transaction) {
-      console.error('[Checkout] Error crear transacción:', txError);
+      console.error('[Checkout] Error crear transacciÃ³n:', txError);
       return NextResponse.json(
         { error: 'Error al inicializar el pago. Intenta nuevamente.' },
         { status: 500 }
       );
     }
 
-    // ─── 9. Crear preferencia de Mercado Pago ────────────────────────────
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://astralevolution.com';
+    // â”€â”€â”€ 9. Crear preferencia de Mercado Pago â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const appUrl = 'https://astralevolution.com';
 
     const mpPreference = await preference.create({
       body: {
@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!mpPreference.init_point) {
-      console.error('[Checkout] MP no retornó init_point:', mpPreference);
+      console.error('[Checkout] MP no retornÃ³ init_point:', mpPreference);
       return NextResponse.json(
         { error: 'Error al crear el enlace de pago. Intenta nuevamente.' },
         { status: 500 }
