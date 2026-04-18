@@ -11,9 +11,9 @@ import { MercadoPagoConfig, Preference } from 'mercadopago';
 
 // â”€â”€â”€ Precios reales por producto â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PRODUCT_PRICES: Record<string, { amount: number; title: string }> = {
-  'lectura-esencial': { amount: 0.01, title: 'Lectura Esencial â€” Astral Evolution' },
-  'consulta-evolutiva': { amount: 0.01, title: 'Consulta Evolutiva â€” Astral Evolution' },
-  'especial-parejas': { amount: 0.01, title: 'Especial Parejas â€” Astral Evolution' },
+  'lectura-esencial': { amount: 10.50, title: 'Lectura Esencial â€” Astral Evolution' },
+  'consulta-evolutiva': { amount: 26.60, title: 'Consulta Evolutiva â€” Astral Evolution' },
+  'especial-parejas': { amount: 38.50, title: 'Especial Parejas â€” Astral Evolution' },
 };
 
 // â”€â”€â”€ IDs de productos en Supabase (hardcoded como fallback seguro) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
