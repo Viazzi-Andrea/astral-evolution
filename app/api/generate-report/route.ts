@@ -96,7 +96,7 @@ async function callGroq(systemInstruction: string, userPrompt: string): Promise<
           { role: 'user',   content: userPrompt },
         ],
         temperature: 0.8,
-        max_tokens:  8192,
+        max_tokens:  6000,
       }),
     });
 
@@ -108,7 +108,8 @@ async function callGroq(systemInstruction: string, userPrompt: string): Promise<
     }
 
     const err = await res.text();
-    if (res.status === 503 || res.status === 429) continue;
+    // Reintentar con modelo siguiente si hay sobrecarga o prompt muy grande
+    if (res.status === 503 || res.status === 429 || res.status === 413) continue;
     throw new Error(`Groq ${res.status}: ${err}`);
   }
 
