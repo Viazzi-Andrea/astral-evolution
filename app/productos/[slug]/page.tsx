@@ -148,6 +148,7 @@ export default function ProductPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [discountPercent, setDiscountPercent] = useState(0);
+  const [discountCode, setDiscountCode] = useState<string | null>(null);
   const [countryCode, setCountryCode] = useState('UY');
   const [pricing, setPricing] = useState({
     amount: 0,
@@ -205,6 +206,7 @@ export default function ProductPage() {
           birthData: formData,
           countryCode,
           amount: pricing.amount,
+          discountCode: discountCode ?? undefined,
         }),
       });
 
@@ -354,7 +356,7 @@ export default function ProductPage() {
           <div className="max-w-3xl mx-auto">
             <div className="bg-gradient-to-b from-white/5 to-transparent border border-white/10 rounded-2xl p-8">
               <h2 className="text-2xl font-bold mb-6 text-center">Completa tus Datos</h2>
-              <DiscountField onDiscount={(pct) => { setDiscountPercent(pct); (window as any).__discountCode = pct > 0 ? (document.querySelector('input[class*=uppercase]') as HTMLInputElement)?.value : null; }} />
+              <DiscountField onDiscount={(pct, code) => { setDiscountPercent(pct); setDiscountCode(code); }} />
               <BirthDataForm
                 onSubmit={handleFormSubmit}
                 isLoading={submitting}

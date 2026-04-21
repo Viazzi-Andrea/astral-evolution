@@ -70,12 +70,24 @@ export function calculateLocalPrice(basePriceUSD: number, countryCode: string, p
 }
 
 export async function getCountryFromIP(ip?: string): Promise<string> {
+  // When called client-side without a specific IP, use the internal geo endpoint
+  // which reads the x-vercel-ip-country header set by Vercel on every request.
+  if (!ip && typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/api/geo');
+      const data = await res.json();
+      if (data.country) return data.country;
+    } catch {
+      // fall through to ipapi.co
+    }
+  }
+
   try {
     const response = await fetch(ip ? `https://ipapi.co/${ip}/json/` : 'https://ipapi.co/json/');
     const data = await response.json();
-    return data.country_code || 'US';
+    return data.country_code || 'UY';
   } catch (error) {
     console.error('Error fetching country from IP:', error);
-    return 'US';
+    return 'UY';
   }
 }

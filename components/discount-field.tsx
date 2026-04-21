@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Tag, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 interface DiscountFieldProps {
-  onDiscount: (percent: number) => void;
+  onDiscount: (percent: number, code: string | null) => void;
 }
 
 export function DiscountField({ onDiscount }: DiscountFieldProps) {
@@ -25,10 +25,10 @@ export function DiscountField({ onDiscount }: DiscountFieldProps) {
       if (data.valid) {
         setStatus('valid');
         setDiscountPercent(data.discountPercent);
-        onDiscount(data.discountPercent);
+        onDiscount(data.discountPercent, code.trim().toUpperCase());
       } else {
         setStatus('invalid');
-        onDiscount(0);
+        onDiscount(0, null);
       }
     } catch {
       setStatus('invalid');
@@ -39,7 +39,7 @@ export function DiscountField({ onDiscount }: DiscountFieldProps) {
     setCode('');
     setStatus('idle');
     setDiscountPercent(0);
-    onDiscount(0);
+    onDiscount(0, null);
   }
 
   return (
