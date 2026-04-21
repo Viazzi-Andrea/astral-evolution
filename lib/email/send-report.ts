@@ -71,11 +71,13 @@ export async function sendReportEmail({
   userName,
   productName,
   reportHTML,
+  chartDataUrl,
 }: {
-  to:          string;
-  userName:    string;
-  productName: string;
-  reportHTML:  string;
+  to:           string;
+  userName:     string;
+  productName:  string;
+  reportHTML:   string;
+  chartDataUrl?: string;
 }): Promise<void> {
   const safeHTML = sanitizeHTML(reportHTML);
   const cards    = buildCards(safeHTML);
@@ -114,6 +116,14 @@ export async function sendReportEmail({
         Tomá el tiempo que necesites para leerlo con calma.
       </p>
     </div>
+
+    <!-- Carta astrológica -->
+    ${chartDataUrl ? `
+    <div style="background:#f8f5ff;padding:32px 24px 8px;text-align:center;">
+      <p style="margin:0 0 16px;font-size:11px;letter-spacing:3px;color:#9b7fd4;text-transform:uppercase;font-family:Georgia,serif;">✦ Tu Carta Natal ✦</p>
+      <img src="${chartDataUrl}" width="380" height="380" alt="Carta Natal Astrológica"
+        style="border-radius:50%;border:2px solid #c9a96e;max-width:100%;display:inline-block;" />
+    </div>` : ''}
 
     <!-- Separador -->
     <div style="background:#f8f5ff;padding:24px 24px 16px;">

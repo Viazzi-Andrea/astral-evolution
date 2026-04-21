@@ -204,9 +204,18 @@ ${aspects_primary(chart)}
 
 ## IV. MENSAJE EVOLUTIVO
 
-Un párrafo final de cierre: la invitación que esta carta hace a ${name}. 
-Sin predicciones. Orientado al autoconocimiento y el crecimiento. 
+Un párrafo final de cierre: la invitación que esta carta hace a ${name}.
+Sin predicciones. Orientado al autoconocimiento y el crecimiento.
 Que resuene como una brújula interior, no como un horóscopo.
+
+## V. CONCLUSIÓN EVOLUTIVA PERSONALIZADA
+
+${personalContext
+  ? `Usando el siguiente contexto personal compartido por ${name}: "${personalContext}"
+
+Redactá 2 o 3 párrafos que sirvan de guía práctica concreta sobre hacia dónde va ${name} desde este punto de partida específico. Conectá los patrones de la carta con la situación real que describe. Que sea accionable, honesto y esperanzador sin ser vacío. Esta sección debe generarse completa antes de finalizar el reporte.`
+  : `Redactá 2 párrafos de cierre que integren todo lo anterior en una guía práctica para ${name}. Que sea concreta y orientada a la acción, no solo poética.`
+}
 
 ---`.trim();
 
@@ -291,6 +300,15 @@ Un cierre de 2 párrafos que integre TODO lo anterior en un mensaje cohesionado.
 ¿Cuál es el "proyecto de vida" que esta carta sugiere para ${name}?
 No como destino fijo, sino como campo de posibilidades conscientes.
 
+## IX. CONCLUSIÓN EVOLUTIVA PERSONALIZADA
+
+${personalContext
+  ? `Usando el siguiente contexto personal de ${name}: "${personalContext}"
+
+Redactá 2 o 3 párrafos de guía práctica concreta que conecten los patrones de la carta con esta situación real. Que sea accionable, honesto y orientado al movimiento. Esta sección debe completarse íntegramente.`
+  : `Redactá 2 párrafos finales de síntesis práctica para ${name}. Que integren la carta con un mandato claro y accionable para el presente.`
+}
+
 ---`.trim();
 
   return { systemInstruction: SYSTEM_INSTRUCTION, userPrompt };
@@ -303,6 +321,7 @@ export function buildSynastryPrompt(
   name1:  string,
   chart2: NatalChart,
   name2:  string,
+  personalContext?: string,
 ): { systemInstruction: string; userPrompt: string } {
 
   const data1 = buildAstroDataBlockCompact(chart1, name1);
@@ -362,6 +381,15 @@ Los Nodos Lunares de ambas personas y lo que sugieren sobre el "por qué" de est
 Un cierre integrador: ¿qué "tercer ser" nace de esta unión?
 ¿Cuál es la invitación evolutiva para ${name1} y ${name2} como pareja?
 Un párrafo honesto sobre los desafíos reales y uno sobre los regalos únicos de este vínculo.
+
+## VIII. CONCLUSIÓN EVOLUTIVA PERSONALIZADA
+
+${personalContext
+  ? `El usuario compartió este contexto sobre la relación: "${personalContext}"
+
+Redactá 2 o 3 párrafos de guía práctica y honesta sobre hacia dónde va este vínculo desde ese punto de partida. Conectá lo que muestra la sinastría con la situación real que describen. Que sea accionable y claro, sin promesas vacías. IMPORTANTE: Esta sección debe completarse íntegramente antes de finalizar el reporte.`
+  : `Redactá 2 párrafos finales de guía práctica para ${name1} y ${name2}. Que integren los patrones de la sinastría con pasos concretos para este momento de la relación.`
+}
 
 ---`.trim();
 

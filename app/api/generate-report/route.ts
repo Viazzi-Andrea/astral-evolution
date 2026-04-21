@@ -15,6 +15,11 @@ import {
   buildEvolutionaryConsultationPrompt,
   buildSynastryPrompt,
 } from '@/lib/astro/prompts';
+import {
+  generateNatalChartSVG,
+  generateSynastryChartSVG,
+  svgToDataUrl,
+} from '@/lib/astro/chart-svg';
 
 // ─── Geocodifica y calcula carta natal ────────────────────────────────────────
 async function computeChart(birth: {
@@ -36,8 +41,8 @@ async function computeChart(birth: {
   });
 }
 
-// ─── Selecciona el prompt correcto según el producto ─────────────────────────
-async function buildPrompt(
+// ─── Selecciona el prompt y genera SVG ───────────────────────────────────────
+async function buildPromptAndChart(
   productSlug: string,
   birthData: {
     name: string;
@@ -54,25 +59,30 @@ async function buildPrompt(
     birth_city: string;
     birth_country: string;
   } | null
-): Promise<{ systemInstruction: string; userPrompt: string }> {
+): Promise<{ systemInstruction: string; userPrompt: string; chartDataUrl: string }> {
 
   if (productSlug === 'especial-parejas' && partnerData) {
     const [chart1, chart2] = await Promise.all([
       computeChart(birthData),
       computeChart(partnerData),
     ]);
-    return buildSynastryPrompt(chart1, birthData.name, chart2, partnerData.name);
+    const svg = generateSynastryChartSVG(chart1, birthData.name, chart2, partnerData.name);
+    return {
+      ...buildSynastryPrompt(chart1, birthData.name, chart2, partnerData.name, birthData.personal_context ?? undefined),
+      chartDataUrl: svgToDataUrl(svg),
+    };
   }
 
   const chart = await computeChart(birthData);
   const context = birthData.personal_context ?? undefined;
+  const svg = generateNatalChartSVG(chart, birthData.name);
+  const chartDataUrl = svgToDataUrl(svg);
 
   if (productSlug === 'consulta-evolutiva') {
-    return buildEvolutionaryConsultationPrompt(chart, birthData.name, context);
+    return { ...buildEvolutionaryConsultationPrompt(chart, birthData.name, context), chartDataUrl };
   }
 
-  // lectura-esencial (y cualquier fallback)
-  return buildEssentialReadingPrompt(chart, birthData.name, context);
+  return { ...buildEssentialReadingPrompt(chart, birthData.name, context), chartDataUrl };
 }
 
 // ─── Groq (OpenAI-compatible) ─────────────────────────────────────────────────
@@ -222,8 +232,8 @@ export async function POST(request: NextRequest) {
 
     console.log(`[GenerateReport] Calculando carta natal para ${birthData.name} en ${birthData.birth_city}...`);
 
-    // Calcular efemérides reales y construir prompt profesional
-    const { systemInstruction, userPrompt } = await buildPrompt(productSlug, birthData, partnerData);
+    // Calcular efemérides reales, construir prompt y generar SVG
+    const { systemInstruction, userPrompt, chartDataUrl } = await buildPromptAndChart(productSlug, birthData, partnerData);
 
     console.log(`[GenerateReport] Llamando a Groq para ${productSlug}...`);
     const rawText = await callAI(systemInstruction, userPrompt);
@@ -247,13 +257,13 @@ export async function POST(request: NextRequest) {
 
     if (userEmail) {
       try {
-        // Convertir markdown → HTML solo para el email
         const htmlForEmail = markdownToHTML(sanitizedText);
         await sendReportEmail({
-          to:         userEmail,
+          to:           userEmail,
           userName,
           productName,
-          reportHTML: htmlForEmail,
+          reportHTML:   htmlForEmail,
+          chartDataUrl,
         });
         await supabase
           .from('reports')
