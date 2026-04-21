@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -33,7 +33,7 @@ export default function GraciasPage() {
 
     checkStatus();
 
-    // Polling cada 15 segundos, mÃ¡ximo 10 veces (2.5 min)
+    // Polling cada 15 segundos, máximo 10 veces (2.5 min)
     const interval = setInterval(() => {
       setPollCount((c) => {
         if (c >= 10) {
@@ -103,15 +103,15 @@ export default function GraciasPage() {
           )}
         </div>
 
-        {/* TÃ­tulo */}
+        {/* Título */}
         <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-purple-400 via-blue-400 to-purple-300 bg-clip-text text-transparent">
-          {isPending ? 'Â¡Pago en Proceso!' : 'Â¡Pago Exitoso!'}
+          {isPending ? '¡Pago en Proceso!' : '¡Pago Exitoso!'}
         </h1>
 
         <p className="text-xl text-gray-300 mb-8">
           {isPending
-            ? 'Tu pago estÃ¡ siendo procesado. RecibirÃ¡s tu lectura cuando se confirme.'
-            : 'Tu lectura astrolÃ³gica estÃ¡ siendo preparada con amor y precisiÃ³n.'}
+            ? 'Tu pago está siendo procesado. Recibirás tu lectura cuando se confirme.'
+            : 'Tu lectura astrológica está siendo preparada con amor y precisión.'}
         </p>
 
         {/* Estado del reporte */}
@@ -148,8 +148,8 @@ export default function GraciasPage() {
               </div>
               <span className="text-purple-300">
                 {reportStatus === 'generating'
-                  ? 'Gemini estÃ¡ generando tu lectura astrolÃ³gica...'
-                  : 'Tu reporte estÃ¡ en cola de generaciÃ³n...'}
+                  ? 'Gemini está generando tu lectura astrológica...'
+                  : 'Tu reporte está en cola de generación...'}
               </span>
             </div>
           )}
@@ -157,13 +157,13 @@ export default function GraciasPage() {
           {reportStatus === 'completed' && (
             <div className="flex items-center gap-3 text-green-400">
               <CheckCircle className="w-5 h-5" />
-              <span>Â¡Tu reporte fue generado exitosamente!</span>
+              <span>¡Tu reporte fue generado exitosamente!</span>
             </div>
           )}
 
           {reportStatus === 'failed' && (
             <div className="text-red-400 text-sm">
-              Hubo un problema generando tu reporte. Nuestro equipo lo resolverÃ¡ pronto.
+              Hubo un problema generando tu reporte. Nuestro equipo lo resolverá pronto.
             </div>
           )}
 
@@ -184,20 +184,20 @@ export default function GraciasPage() {
         >
           <div className="flex items-center gap-3 mb-4">
             <Mail className="w-5 h-5 text-blue-400 flex-shrink-0" />
-            <h2 className="text-lg font-semibold text-white">Â¿QuÃ© sigue?</h2>
+            <h2 className="text-lg font-semibold text-white">¿Qué sigue?</h2>
           </div>
           <div className="space-y-3 text-sm text-gray-400 text-left">
             <div className="flex items-start gap-3">
               <div className="w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs text-purple-300">1</div>
-              <span>Tu lectura astrolÃ³gica se genera automÃ¡ticamente usando Inteligencia Artificial.</span>
+              <span>Tu lectura astrológica se genera automáticamente usando Inteligencia Artificial.</span>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs text-purple-300">2</div>
-              <span>RecibirÃ¡s un email con tu reporte completo en formato PDF en los prÃ³ximos 10-30 minutos.</span>
+              <span>Recibirás un email con tu reporte completo en los próximos 10-30 minutos.</span>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs text-purple-300">3</div>
-              <span>Si tienes dudas, escrÃ­benos a <span className="text-purple-400">contacto@astralevolution.com</span></span>
+              <span>Si tenés dudas, escribinos a <span className="text-purple-400">contacto@astralevolution.com</span></span>
             </div>
           </div>
         </div>
@@ -211,7 +211,7 @@ export default function GraciasPage() {
             color: 'white',
           }}
         >
-          Volver al inicio âœ¨
+          Volver al inicio ✨
         </button>
       </div>
     </main>
