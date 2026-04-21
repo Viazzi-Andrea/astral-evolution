@@ -100,7 +100,7 @@ async function tryGroq(systemInstruction: string, userPrompt: string): Promise<s
           { role: 'user',   content: userPrompt },
         ],
         temperature: 0.8,
-        max_tokens:  4000,
+        max_tokens:  5500,
       }),
     });
 
@@ -135,7 +135,7 @@ async function tryGemini(systemInstruction: string, userPrompt: string): Promise
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: `${systemInstruction}\n\n${userPrompt}` }] }],
-        generationConfig: { maxOutputTokens: 4000, temperature: 0.8 },
+        generationConfig: { maxOutputTokens: 5500, temperature: 0.8 },
       }),
     });
 
@@ -228,7 +228,9 @@ export async function POST(request: NextRequest) {
     console.log(`[GenerateReport] Llamando a Groq para ${productSlug}...`);
     const rawText = await callAI(systemInstruction, userPrompt);
 
-    // Convertir markdown a HTML si Groq devuelve markdown (los prompts de lib/astro/prompts.ts usan # y ##)
+    // Log para diagnóstico: ver qué formato devuelve la IA
+    console.log(`[GenerateReport] Raw output (primeros 200 chars): ${rawText.slice(0, 200)}`);
+
     const htmlText = markdownToHTML(rawText);
     const sanitizedText = sanitizeAIOutput(htmlText);
 
@@ -278,23 +280,30 @@ export async function POST(request: NextRequest) {
 
 // ─── Convierte markdown básico a HTML ────────────────────────────────────────
 function markdownToHTML(text: string): string {
-  return text
-    // Encabezados
-    .replace(/^# (.+)$/gm,   '<h1>$1</h1>')
-    .replace(/^## (.+)$/gm,  '<h2>$1</h2>')
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    // Negrita e itálica
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g,     '<em>$1</em>')
-    // Listas
-    .replace(/^[·•\-] (.+)$/gm, '<li>$1</li>')
-    // Párrafos: líneas que no son etiquetas ni listas
-    .replace(/^(?!<[a-z]|---|\s*$)(.+)$/gm, '<p>$1</p>')
-    // Envolver listas sueltas de <li>
-    .replace(/(<li>[\s\S]+?<\/li>)(?!\s*<li>)/g, '<ul>$1</ul>')
-    // Separadores
-    .replace(/^---$/gm, '<hr>')
-    // Limpiar líneas vacías múltiples
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  // Normalizar saltos de línea (Windows \r\n → \n)
+  let t = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // Encabezados (antes de cualquier otra cosa)
+  t = t.replace(/^#{3} (.+)$/gm, '<h3>$1</h3>');
+  t = t.replace(/^#{2} (.+)$/gm, '<h2>$1</h2>');
+  t = t.replace(/^#{1} (.+)$/gm, '<h1>$1</h1>');
+
+  // Negrita e itálica
+  t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  t = t.replace(/\*(.+?)\*/g,     '<em>$1</em>');
+
+  // Listas: acumular <li> consecutivos y envolver en <ul>
+  t = t.replace(/^[·•\-\*] (.+)$/gm, '<li>$1</li>');
+  t = t.replace(/(<li>[^\n]+<\/li>\n?)+/g, match => `<ul>${match}</ul>`);
+
+  // Separadores
+  t = t.replace(/^---+$/gm, '<hr>');
+
+  // Párrafos: líneas no vacías que no empiezan con etiqueta HTML
+  t = t.replace(/^(?!<\/?(h[1-6]|ul|li|hr|p|strong|em)[ >])(.+)$/gm, '<p>$2</p>');
+
+  // Limpiar líneas vacías múltiples
+  t = t.replace(/\n{3,}/g, '\n\n');
+
+  return t.trim();
 }
