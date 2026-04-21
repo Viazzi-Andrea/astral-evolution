@@ -80,9 +80,17 @@ async function callGroq(systemInstruction: string, userPrompt: string): Promise<
   const apiKey = process.env.GROQ_API_KEY?.replace(/[\r\n\s]/g, '');
   if (!apiKey) throw new Error('GROQ_API_KEY no configurada');
 
-  const models = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+  const models = [
+    'llama-3.3-70b-versatile',
+    'llama-3.1-70b-versatile',
+    'llama3-70b-8192',
+    'llama-3.1-8b-instant',
+  ];
 
-  for (const model of models) {
+  for (let i = 0; i < models.length; i++) {
+    if (i > 0) await new Promise(r => setTimeout(r, 800));
+
+    const model = models[i];
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -104,11 +112,12 @@ async function callGroq(systemInstruction: string, userPrompt: string): Promise<
       const data = await res.json();
       const text = data?.choices?.[0]?.message?.content;
       if (!text) throw new Error('Groq no retornó texto');
+      console.log(`[GenerateReport] Modelo usado: ${model}`);
       return text;
     }
 
     const err = await res.text();
-    // Reintentar con modelo siguiente si hay sobrecarga o prompt muy grande
+    console.warn(`[GenerateReport] ${model} falló (${res.status}), probando siguiente...`);
     if (res.status === 503 || res.status === 429 || res.status === 413) continue;
     throw new Error(`Groq ${res.status}: ${err}`);
   }
