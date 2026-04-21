@@ -1,212 +1,87 @@
 /**
  * lib/email/send-birthday.ts
- * Email de cumpleaños con mini análisis de Revolución Solar.
- * Se envía automáticamente el día del cumpleaños de cada cliente.
- * Incluye 2-3 revelaciones del año + CTA para comprar el análisis completo.
+ * Email de cumpleaños con mini Revolución Solar via SendGrid
+ * Objetivo: regalo + invitación a comprar lectura completa
  */
 
-export interface BirthdayEmailData {
-  toEmail: string;
-  toName: string;
-  birthDate: string;       // "YYYY-MM-DD"
-  birthCity: string;
-  birthCountry: string;
-  miniAnalysis: string;    // Generado por Gemini, ya sanitizado
-  userId: string;
-}
+import sgMail from '@sendgrid/mail';
 
-export function buildBirthdayEmailHTML(data: BirthdayEmailData): string {
-  const year = new Date().getFullYear();
+sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
 
-  // Formato: "15 de abril"
-  const [, , day] = data.birthDate.split('-');
-  const monthNames = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  const birthMonth = new Date(data.birthDate).getMonth();
-  const birthdayFormatted = `${parseInt(day)} de ${monthNames[birthMonth]}`;
+export async function sendBirthdayEmail({
+    to,
+    userName,
+    miniReport,
+}: {
+    to: string;
+    userName: string;
+    miniReport: string;
+}): Promise<void> {
+    const html = `
+        <!DOCTYPE html>
+            <html lang="es">
+                <head>
+                      <meta charset="UTF-8" />
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                                  <title>Feliz Cumpleaños</title>
+                                        <style>
+                                                body { font-family: Georgia, serif; background: #0a0a1a; color: #e8e0f0; margin: 0; padding: 0; }
+                                                        .container { max-width: 700px; margin: 0 auto; padding: 40px 20px; }
+                                                                .header { text-align: center; padding: 40px 0 30px; border-bottom: 1px solid #2a1f4a; }
+                                                                        .header h1 { font-size: 28px; color: #c9a6f5; letter-spacing: 3px; margin: 0 0 8px; }
+                                                                                .header p { color: #9b8ab0; font-size: 16px; margin: 0; }
+                                                                                        .greeting { padding: 30px 0 20px; font-size: 16px; color: #c9b8e0; line-height: 1.8; }
+                                                                                                .report-content { background: #100d1f; border: 1px solid #2a1f4a; border-radius: 12px; padding: 30px; margin: 20px 0; line-height: 1.8; }
+                                                                                                        .cta-block { text-align: center; background: linear-gradient(135deg, #1a0a2e, #2a1f4a); border: 1px solid #6b3fa0; border-radius: 12px; padding: 30px; margin: 30px 0; }
+                                                                                                                .cta-block h2 { color: #c9a6f5; font-size: 20px; margin: 0 0 12px; }
+                                                                                                                        .cta-block p { color: #9b8ab0; font-size: 14px; margin: 0 0 20px; line-height: 1.6; }
+                                                                                                                                .cta-button { display: inline-block; background: linear-gradient(135deg, #7c3aed, #a855f7); color: #fff !important; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 15px; font-weight: bold; letter-spacing: 1px; }
+                                                                                                                                        .footer { text-align: center; padding: 30px 0; color: #6b5f80; font-size: 12px; border-top: 1px solid #2a1f4a; margin-top: 30px; }
+                                                                                                                                              </style>
+                                                                                                                                                  </head>
+                                                                                                                                                      <body>
+                                                                                                                                                            <div class="container">
+                                                                                                                                                                    <div class="header">
+                                                                                                                                                                              <h1>✦ ASTRAL EVOLUTION ✦</h1>
+                                                                                                                                                                                        <p>🎂 Tu Revolución Solar de Cumpleaños</p>
+                                                                                                                                                                                                </div>
+                                                                                                                                                                                                
+                                                                                                                                                                                                        <div class="greeting">
+                                                                                                                                                                                                                  <p>¡Feliz cumpleaños, <strong>${userName}</strong>! 🌟</p>
+                                                                                                                                                                                                                            <p>Hoy el Sol regresa exactamente al lugar donde estaba el día que llegaste a este mundo. Eso se llama <strong>Revolución Solar</strong> — y es uno de los momentos más poderosos del año para vos.</p>
+                                                                                                                                                                                                                                      <p>Como regalo, preparamos una mirada breve a lo que las estrellas tienen para decirte en este nuevo ciclo:</p>
+                                                                                                                                                                                                                                              </div>
+                                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                      <div class="report-content">
+                                                                                                                                                                                                                                                                ${miniReport}
+                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                <div class="cta-block">
+                                                                                                                                                                                                                                                                                          <h2>¿Querés ir más profundo?</h2>
+                                                                                                                                                                                                                                                                                                    <p>Esta es solo una pequeña parte de lo que tu carta revela. Una Revolución Solar completa incluye el análisis de las 12 casas, los tránsitos del año y las oportunidades específicas para cada área de tu vida.</p>
+                                                                                                                                                                                                                                                                                                              <a href="https://astralevolution.com/productos/consulta-evolutiva" class="cta-button">
+                                                                                                                                                                                                                                                                                                                          Ver mi análisis completo →
+                                                                                                                                                                                                                                                                                                                                    </a>
+                                                                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                                                                    <div class="footer">
+                                                                                                                                                                                                                                                                                                                                                              <p>© 2026 Astral Evolution · Todos los derechos reservados</p>
+                                                                                                                                                                                                                                                                                                                                                                        <p>Recibís este email porque sos parte de nuestra comunidad. <a href="#" style="color: #6b5f80;">Cancelar suscripción</a></p>
+                                                                                                                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                                                                                                                                      </div>
+                                                                                                                                                                                                                                                                                                                                                                                          </body>
+                                                                                                                                                                                                                                                                                                                                                                                              </html>
+                                                                                                                                                                                                                                                                                                                                                                                                `;
 
-  // Mini análisis: convertir **negrita** a HTML
-  const analysisHTML = data.miniAnalysis
-    .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#fbbf24;">$1</strong>')
-    .split('\n\n')
-    .map(p => `<p style="margin:0 0 16px;font-family:Georgia,serif;font-size:15px;color:#e5e7eb;line-height:1.8;">${p.trim()}</p>`)
-    .join('');
+  await sgMail.send({
+        to,
+        from: {
+                email: 'lecturas@astralevolution.com',
+                name: 'Astral Evolution',
+        },
+        subject: `🎂 ¡Feliz cumpleaños ${userName}! Tu regalo astrológico está aquí`,
+        html,
+  });
 
-  return `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>¡Feliz Cumpleaños, ${data.toName}! · Astral Evolution</title>
-</head>
-<body style="margin:0;padding:0;background-color:#06060f;">
-
-<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color:#06060f;min-height:100vh;">
-  <tr>
-    <td align="center" style="padding:40px 16px 60px;">
-      <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width:620px;">
-
-        <!-- ─── HEADER DE CUMPLEAÑOS ──────────────────────── -->
-        <tr>
-          <td>
-            <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
-              style="background:linear-gradient(160deg,#12080a 0%,#0f0a1e 60%,#120810 100%);border-radius:24px 24px 0 0;border:1px solid rgba(251,191,36,0.2);border-bottom:none;">
-              <tr>
-                <td style="padding:48px 40px 36px;text-align:center;">
-
-                  <div style="margin-bottom:24px;">
-                    <span style="display:inline-block;padding:8px 20px;border-radius:50px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);color:#fcd34d;font-family:Arial,sans-serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;">
-                      ✦ Astral Evolution ✦
-                    </span>
-                  </div>
-
-                  <!-- Emoji animado cumpleaños -->
-                  <div style="font-size:52px;margin-bottom:20px;line-height:1;">🎂</div>
-
-                  <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:30px;font-weight:normal;color:#f9fafb;">
-                    ¡Feliz Cumpleaños,<br>
-                    <em style="color:#fcd34d;">${data.toName}</em>!
-                  </h1>
-                  <p style="margin:12px 0 0;font-family:Arial,sans-serif;font-size:15px;color:#9ca3af;">
-                    Hoy, ${birthdayFormatted}, el Sol vuelve exactamente al lugar donde estaba cuando llegaste al mundo.
-                    <br>Eso se llama <strong style="color:#fbbf24;">Revolución Solar</strong> — y este año tiene mensajes únicos para vos.
-                  </p>
-
-                  <div style="margin:28px auto 0;max-width:200px;height:1px;background:linear-gradient(90deg,transparent,rgba(251,191,36,0.4),transparent);"></div>
-
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-        <!-- ─── SECCIÓN: LO QUE VIENE ESTE AÑO ──────────── -->
-        <tr>
-          <td>
-            <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
-              style="background:#0d0b1a;border-left:1px solid rgba(251,191,36,0.15);border-right:1px solid rgba(251,191,36,0.15);">
-              <tr>
-                <td style="padding:32px 40px;">
-
-                  <!-- Título de sección -->
-                  <table cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:24px;">
-                    <tr>
-                      <td>
-                        <div style="display:inline-block;padding:6px 14px;border-radius:8px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.25);">
-                          <span style="font-family:Arial,sans-serif;font-size:12px;color:#fcd34d;letter-spacing:1px;text-transform:uppercase;font-weight:600;">
-                            🔮 Tu año ${year} — ${year + 1}
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  </table>
-
-                  <!-- Mini análisis -->
-                  ${analysisHTML}
-
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-        <!-- ─── CTA: VER EL ANÁLISIS COMPLETO ────────────── -->
-        <tr>
-          <td>
-            <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
-              style="background:#0d0b1a;border-left:1px solid rgba(251,191,36,0.15);border-right:1px solid rgba(251,191,36,0.15);">
-              <tr>
-                <td style="padding:0 40px 40px;">
-
-                  <!-- Card de upgrade -->
-                  <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
-                    style="background:linear-gradient(135deg,rgba(251,191,36,0.08),rgba(139,92,246,0.08));border:1px solid rgba(251,191,36,0.25);border-radius:16px;">
-                    <tr>
-                      <td style="padding:28px 28px 24px;text-align:center;">
-                        <p style="margin:0 0 6px;font-family:Georgia,serif;font-size:18px;color:#f9fafb;">
-                          Esto es solo el comienzo 🌟
-                        </p>
-                        <p style="margin:0 0 20px;font-family:Arial,sans-serif;font-size:14px;color:#9ca3af;line-height:1.6;">
-                          Tu Revolución Solar completa incluye el análisis de todas las casas activadas, los tránsitos del año, tus ciclos personales y un plan mes a mes. 10-15 páginas dedicadas únicamente a vos.
-                        </p>
-                        <a href="https://astralevolution.com/productos/consulta-evolutiva"
-                          style="display:inline-block;padding:14px 32px;border-radius:50px;background:linear-gradient(135deg,#d97706,#b45309);color:#ffffff;font-family:Arial,sans-serif;font-size:14px;font-weight:700;text-decoration:none;letter-spacing:0.5px;">
-                          🎁 Ver mi análisis completo →
-                        </a>
-                        <p style="margin:16px 0 0;font-family:Arial,sans-serif;font-size:12px;color:#6b7280;">
-                          Como cliente anterior, tenés acceso prioritario. Sin filas.
-                        </p>
-                      </td>
-                    </tr>
-                  </table>
-
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-        <!-- ─── FOOTER ─────────────────────────────────────── -->
-        <tr>
-          <td>
-            <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
-              style="background:#090714;border-radius:0 0 24px 24px;border:1px solid rgba(251,191,36,0.1);border-top:none;">
-              <tr>
-                <td style="padding:24px 40px;text-align:center;">
-                  <p style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:13px;color:#4b5563;">
-                    Este regalo astral llega porque alguna vez confiaste en nosotros. Gracias 🙏
-                  </p>
-                  <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#374151;">
-                    © ${year} Astral Evolution ·
-                    <a href="https://astralevolution.com" style="color:#6b21a8;text-decoration:none;">astralevolution.com</a>
-                  </p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-      </table>
-    </td>
-  </tr>
-</table>
-
-</body>
-</html>`;
-}
-
-// ─── Envío del email de cumpleaños ────────────────────────────────────────────
-export async function sendBirthdayEmail(data: BirthdayEmailData): Promise<{ success: boolean; error?: string }> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  if (!apiKey) return { success: false, error: 'RESEND_API_KEY no configurada' };
-
-  const fromAddress = process.env.EMAIL_FROM?.trim() ?? 'lecturas@astralevolution.com';
-
-  try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: `Astral Evolution <${fromAddress}>`,
-        to: [data.toEmail],
-        subject: `🎂 ¡Feliz cumpleaños, ${data.toName}! Tu año astrológico te espera`,
-        html: buildBirthdayEmailHTML(data),
-        tags: [
-          { name: 'category', value: 'birthday' },
-        ],
-      }),
-    });
-
-    if (!res.ok) {
-      const err = await res.text();
-      return { success: false, error: err };
-    }
-
-    console.log(`[Birthday Email] Enviado a ${data.toEmail}`);
-    return { success: true };
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Error desconocido' };
-  }
+  console.log(`[Birthday] Email enviado a ${to} via SendGrid ✓`);
 }
