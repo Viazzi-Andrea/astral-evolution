@@ -97,62 +97,41 @@ ExtensiÃ³n: 14-18 pÃ¡rrafos. Usa **negritas** para tÃ­tulos. Tono: revelad
   return `Genera un anÃ¡lisis astrolÃ³gico personalizado para ${birthData.name}, nacido/a el ${birthData.birth_date} a las ${birthData.birth_time} en ${birthData.birth_city}, ${birthData.birth_country}. SÃ© profundo y evolutivo.`;
 }
 
-// â”€â”€â”€ Llamada a Gemini con limpieza de key â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€â”€ Llamada a Groq ─────────────────────────────────────────────────────────
 async function callGemini(prompt: string): Promise<string> {
-  // Limpia saltos de lÃ­nea invisibles â€” bug conocido con echo en Vercel CLI
-  const apiKey = process.env.GEMINI_API_KEY?.replace(/[\r\n\s]/g, '');
-  if (!apiKey) throw new Error('GEMINI_API_KEY no configurada');
+  const apiKey = process.env.GROQ_API_KEY?.replace(/[\r\n\s]/g, '');
+  if (!apiKey) throw new Error('GROQ_API_KEY no configurada');
 
-  const models = ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-2.0-flash', 'gemini-2.5-pro'];
-  const maxRetries = 1;
-
-  const body = JSON.stringify({
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: {
-      temperature: 0.8,
-      topK: 40,
-      topP: 0.95,
-      maxOutputTokens: 4096,
-    },
-    safetySettings: [
-      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-    ],
-  });
+  const models = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
 
   for (const model of models) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.8,
+        max_tokens: 4096,
+      }),
+    });
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!text) throw new Error('Gemini no retornÃ³ texto');
-        return text;
-      }
-
-      const err = await res.text();
-
-      // Si el modelo no está disponible, pasar al siguiente modelo
-      if (res.status === 404) break;
-
-      // Si es 503 (demanda alta) y quedan intentos, esperar y reintentar
-      if (res.status === 503) break;
-
-      // Cualquier otro error fatal
-      if (attempt === maxRetries) throw new Error(`Gemini ${res.status}: ${err}`);
+    if (res.ok) {
+      const data = await res.json();
+      const text = data?.choices?.[0]?.message?.content;
+      if (!text) throw new Error('Groq no retornó texto');
+      return text;
     }
+
+    const err = await res.text();
+    if (res.status === 503 || res.status === 429) continue;
+    throw new Error(`Groq ${res.status}: ${err}`);
   }
 
-  throw new Error('Gemini no disponible tras varios intentos');
+  throw new Error('Groq no disponible, intentá en unos minutos');
 }
 
 // â”€â”€â”€ Handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
