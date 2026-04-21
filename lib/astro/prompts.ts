@@ -74,6 +74,23 @@ SÍNTESIS CONFIGURACIONAL:
 ════════════════════════════════════════════`.trim();
 }
 
+// Versión compacta para sinastría (dos cartas = doble tokens, hay que ahorrar)
+function buildAstroDataBlockCompact(chart: NatalChart, name: string): string {
+  const { planets, ascendant, northNode, chartSummary } = chart;
+  const personal = ['Sol', 'Luna', 'Mercurio', 'Venus', 'Marte', 'Júpiter', 'Saturno'];
+  const personalPlanets = planets.filter(p => personal.includes(p.name));
+  const outerPlanets    = planets.filter(p => !personal.includes(p.name));
+
+  return `
+── CARTA DE ${name.toUpperCase()} ──
+PLANETAS PERSONALES:
+${personalPlanets.map(formatPlanet).join('\n')}
+ASC: ${formatPlanet(ascendant)}
+Nodo Norte: ${northNode.degreeStr} — Casa ${northNode.house}
+TRANSPERSONALES: ${outerPlanets.map(p => `${p.name} ${p.degreeStr}`).join(' | ')}
+SÍNTESIS: Sol ${chartSummary.sunSign} · Luna ${chartSummary.moonSign} · ASC ${chartSummary.ascendantSign} · ${chartSummary.dominantElement}/${chartSummary.dominantModality}`.trim();
+}
+
 // ─── SISTEMA DE INSTRUCCIONES (System Prompt) ─────────────────────────────────
 
 const SYSTEM_INSTRUCTION = `Eres un astrólogo psicológico y evolutivo de nivel maestro. 
@@ -277,8 +294,8 @@ export function buildSynastryPrompt(
   name2:  string,
 ): { systemInstruction: string; userPrompt: string } {
 
-  const data1 = buildAstroDataBlock(chart1, name1);
-  const data2 = buildAstroDataBlock(chart2, name2);
+  const data1 = buildAstroDataBlockCompact(chart1, name1);
+  const data2 = buildAstroDataBlockCompact(chart2, name2);
 
   // Calcular aspectos entre cartas (sinastría)
   const synAspects = calculateSynastryAspects(chart1, chart2);
@@ -289,7 +306,7 @@ ${data1}
 ${data2}
 
 ASPECTOS DE SINASTRÍA (posiciones de ${name1} vs posiciones de ${name2}):
-${synAspects.length > 0 ? synAspects.slice(0, 12).map(formatAspect).join('\n') : 'Calcular manualmente con los datos anteriores.'}
+${synAspects.length > 0 ? synAspects.slice(0, 7).map(formatAspect).join('\n') : 'Calcular manualmente con los datos anteriores.'}
 
 TAREA: Genera un "Especial Parejas — Lectura de Sinastría" para ${name1} y ${name2}.
 Extensión: 1500–2000 palabras. Con profundidad real.
