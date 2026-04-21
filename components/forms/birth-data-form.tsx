@@ -30,7 +30,7 @@ export interface BirthDataFormData {
 }
 
 interface BirthDataFormProps {
-  onSubmit: (data: BirthDataFormData) => void;
+  onSubmit: (data: BirthDataFormData, partnerData?: Partial<BirthDataFormData>) => void;
   isLoading?: boolean;
   showPartnerFields?: boolean;
 }
@@ -105,7 +105,7 @@ export function BirthDataForm({ onSubmit, isLoading = false, showPartnerFields =
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit(formData, showPartnerFields ? partnerData : undefined);
   };
 
   return (

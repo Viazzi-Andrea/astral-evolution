@@ -192,7 +192,7 @@ export default function ProductPage() {
   }, [product, countryCode, slug]);
 
   // ── Submit: manda todo al servidor → /api/checkout hace el resto ─────────────
-  const handleFormSubmit = async (formData: BirthDataFormData) => {
+  const handleFormSubmit = async (formData: BirthDataFormData, partnerData?: Partial<BirthDataFormData>) => {
     if (!product) return;
     setSubmitting(true);
 
@@ -204,6 +204,7 @@ export default function ProductPage() {
           productSlug: product.slug,
           productId: product.id,
           birthData: formData,
+          partnerBirthData: partnerData ?? undefined,
           countryCode,
           amount: pricing.amount,
           discountCode: discountCode ?? undefined,
