@@ -72,7 +72,7 @@ export async function sendReportEmail({
   await sgMail.send({
         to,
         from: {
-                email: 'lecturas@astralevolution.com',
+                email: 'castraluy@gmail.com',
                 name: 'Astral Evolution',
         },
         subject: `✦ Tu ${productName} está listo, ${userName}`,
