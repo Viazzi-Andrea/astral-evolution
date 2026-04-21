@@ -216,24 +216,20 @@ export async function POST(request: NextRequest) {
 
     // Enviar email si tenemos la direcciÃ³n
     if (userEmail) {
-      const emailResult = await sendReportEmail({
-        toEmail: userEmail,
-        productSlug: productSlug,
-        toName: userName,
-        productName,
-        reportContent: sanitizedText,
-        transactionId,
-      });
-
-      if (emailResult.success) {
-        // Marcar como enviado
+      try {
+        await sendReportEmail({
+          to: userEmail,
+          userName,
+          productName,
+          reportHTML: sanitizedText,
+        });
         await supabase
           .from('reports')
           .update({ sent_at: new Date().toISOString() })
           .eq('transaction_id', transactionId);
-        console.log(`[GenerateReport] âœ… Email enviado a ${userEmail}`);
-      } else {
-        console.error(`[GenerateReport] âš ï¸ Email fallÃ³:`, emailResult.error);
+        console.log(`[GenerateReport] ✅ Email enviado a ${userEmail}`);
+      } catch (emailErr) {
+        console.error('[GenerateReport] ⚠️ Email falló:', emailErr);
       }
     }
 

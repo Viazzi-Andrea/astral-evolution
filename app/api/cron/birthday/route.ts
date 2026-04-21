@@ -146,23 +146,13 @@ export async function GET(request: NextRequest) {
       const cleanAnalysis = sanitizeAIOutput(rawAnalysis);
 
       // Enviar email
-      const emailResult = await sendBirthdayEmail({
-        toEmail: user.email,
-        toName: bd.name,
-        birthDate: bd.birth_date,
-        birthCity: bd.birth_city,
-        birthCountry: bd.birth_country,
-        miniAnalysis: cleanAnalysis,
-        userId: bd.user_id,
+      await sendBirthdayEmail({
+        to: user.email,
+        userName: bd.name,
+        miniReport: cleanAnalysis,
       });
-
-      if (emailResult.success) {
-        results.sent++;
-        console.log(`[Birthday Cron] ✅ Email enviado a ${user.email}`);
-      } else {
-        results.failed++;
-        results.errors.push(`${user.email}: ${emailResult.error}`);
-      }
+      results.sent++;
+      console.log(`[Birthday Cron] ✅ Email enviado a ${user.email}`)
 
       // Pequeña pausa entre emails para no saturar la API de Gemini
       await new Promise((r) => setTimeout(r, 2000));
