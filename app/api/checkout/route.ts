@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
     }
 
     // â”€â”€â”€ 8. Crear transacciÃ³n pendiente en Supabase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    const DISCOUNT_CODES: Record<string,number> = { PRUEBA100: 100, ASTRAL50: 50, CUMPLE: 20 };
+    const DISCOUNT_CODES: Record<string,number> = { PRUEBA100: 100, ASTRAL50: 50, CUMPLE: 20, TEST99: 99 };
     const discountPct = discountCode ? (DISCOUNT_CODES[String(discountCode).toUpperCase()] || 0) : 0;
     const isFree = discountPct === 100;
     const finalAmount = isFree ? 0 : Math.round(productPrice.amount * (1 - discountPct / 100) * 100) / 100;

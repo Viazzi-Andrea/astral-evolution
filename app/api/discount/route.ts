@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const CODES: Record<string, number> = {
   PRUEBA100: 100,
+  TEST99: 99,
   ASTRAL50: 50,
   CUMPLE: 20,
 };
