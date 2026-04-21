@@ -82,9 +82,9 @@ async function callGroq(systemInstruction: string, userPrompt: string): Promise<
 
   const models = [
     'llama-3.3-70b-versatile',
-    'llama-3.1-70b-versatile',
-    'llama3-70b-8192',
     'llama-3.1-8b-instant',
+    'gemma2-9b-it',
+    'llama3-8b-8192',
   ];
 
   for (let i = 0; i < models.length; i++) {
@@ -118,7 +118,7 @@ async function callGroq(systemInstruction: string, userPrompt: string): Promise<
 
     const err = await res.text();
     console.warn(`[GenerateReport] ${model} falló (${res.status}), probando siguiente...`);
-    if (res.status === 503 || res.status === 429 || res.status === 413) continue;
+    if (res.status === 503 || res.status === 429 || res.status === 413 || res.status === 400) continue;
     throw new Error(`Groq ${res.status}: ${err}`);
   }
 
