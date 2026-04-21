@@ -233,13 +233,22 @@ export async function POST(request: NextRequest) {
     console.error('[Webhook MP] Error creando registro de reporte:', reportError);
   }
 
-  // 8. Disparar generación de reporte en background (fire-and-forget)
+  // 8. Generar reporte (await para que no se cancele al devolver respuesta)
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://astralevolution.com';
-  fetch(`${appUrl}/api/generate-report`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ transactionId }),
-  }).catch((err) => console.error('[Webhook MP] Error disparando generación:', err));
+  try {
+    const genRes = await fetch(`${appUrl}/api/generate-report`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transactionId }),
+    });
+    if (!genRes.ok) {
+      console.error('[Webhook MP] Error en generate-report:', genRes.status);
+    } else {
+      console.log('[Webhook MP] Reporte generado OK');
+    }
+  } catch (err) {
+    console.error('[Webhook MP] Error disparando generación:', err);
+  }
 
   // 9. Notificación WhatsApp
   const productName = (updatedTx as any).products?.name_es ?? 'Producto desconocido';
