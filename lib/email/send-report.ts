@@ -43,7 +43,7 @@ export async function sendReportEmail({
                                                                       .header h1 { font-size: 28px; color: #c9a6f5; letter-spacing: 3px; margin: 0 0 8px; }
                                                                               .header p { color: #9b8ab0; font-size: 14px; margin: 0; }
                                                                                       .greeting { padding: 30px 0 20px; font-size: 16px; color: #c9b8e0; line-height: 1.6; }
-                                                                                              .report-content { background: #100d1f; border: 1px solid #2a1f4a; border-radius: 12px; padding: 30px; margin: 20px 0; line-height: 1.8; }
+                                                                                              .report-content { background: #100d1f; border: 1px solid #2a1f4a; border-radius: 12px; padding: 30px; margin: 20px 0; line-height: 1.8; color: #e8e0f0; }
                                                                                                       .footer { text-align: center; padding: 30px 0; color: #6b5f80; font-size: 12px; border-top: 1px solid #2a1f4a; margin-top: 30px; }
                                                                                                             </style>
                                                                                                                 </head>
