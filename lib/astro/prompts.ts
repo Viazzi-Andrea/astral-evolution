@@ -143,7 +143,9 @@ PRINCIPIOS INQUEBRANTABLES DE TU ESCRITURA:
    · Usa **texto** para resaltar planetas, signos y conceptos clave.
    · Separá siempre los párrafos con una línea en blanco entre ellos.
    · No uses listas de puntos (- o *) salvo que sean estrictamente necesarias.
-   · No añadas texto introductorio antes del primer ##. Empezá directamente con la primera sección.`;
+   · No añadas texto introductorio antes del primer ##. Empezá directamente con la primera sección.
+   · Sé profundo pero conciso: evitá repetir conceptos ya mencionados en secciones anteriores.
+   · PRIORITARIO: completá TODAS las secciones antes de alcanzar el límite de longitud. Si ves que el espacio se agota, resumí los párrafos finales pero nunca dejes una sección incompleta o cortada a la mitad.`;
 
 // ─── PLANTILLA: LECTURA ESENCIAL ─────────────────────────────────────────────
 

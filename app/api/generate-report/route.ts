@@ -100,7 +100,7 @@ async function tryGroq(systemInstruction: string, userPrompt: string): Promise<s
           { role: 'user',   content: userPrompt },
         ],
         temperature: 0.8,
-        max_tokens:  5500,
+        max_tokens:  8000,
       }),
     });
 
@@ -135,7 +135,7 @@ async function tryGemini(systemInstruction: string, userPrompt: string): Promise
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: `${systemInstruction}\n\n${userPrompt}` }] }],
-        generationConfig: { maxOutputTokens: 5500, temperature: 0.8 },
+        generationConfig: { maxOutputTokens: 8000, temperature: 0.8 },
       }),
     });
 

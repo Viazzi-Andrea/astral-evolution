@@ -189,7 +189,7 @@ export default function GraciasPage() {
           <div className="space-y-3 text-sm text-gray-400 text-left">
             <div className="flex items-start gap-3">
               <div className="w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs text-purple-300">1</div>
-              <span>Tu lectura astrológica se genera automáticamente usando Inteligencia Artificial.</span>
+              <span>Tu lectura astrológica está siendo preparada de forma personalizada para vos.</span>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs text-purple-300">2</div>

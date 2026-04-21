@@ -142,27 +142,25 @@ export function validateServerEnv(): void {
 // ─── Output Sanitizer (para reportes de IA) ──────────────────────────────────
 
 /**
- * Sanitiza el texto generado por Gemini antes de renderizarlo en el DOM.
- * Elimina tags HTML, scripts y caracteres de control peligrosos.
+ * Sanitiza el output de la IA para almacenamiento seguro en formato Markdown.
+ * NO escapa entidades HTML (para no corromper el markdown).
+ * Solo elimina inyecciones peligrosas y caracteres de control.
  */
 export function sanitizeAIOutput(raw: string): string {
   return raw
-    // Eliminar tags HTML/script
+    // Eliminar bloques script/style completos
     .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, '')
+    // Eliminar tags HTML (la IA debe devolver solo markdown)
     .replace(/<[^>]+>/g, '')
     // Eliminar inyecciones de protocolo
     .replace(/javascript:/gi, '')
     .replace(/vbscript:/gi, '')
     .replace(/data:text\/html/gi, '')
-    // Escapar entidades HTML básicas
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    // Eliminar caracteres de control (excepto saltos de línea y tabs)
+    // Eliminar caracteres de control que rompen JSON (excepto \n, \r, \t)
     // eslint-disable-next-line no-control-regex
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Normalizar saltos de línea
+    .replace(/\r\n/g, '\n').replace(/\r/g, '\n')
     .trim();
 }
