@@ -154,7 +154,9 @@ export async function POST(request: NextRequest) {
     // â”€â”€â”€ 8. Crear transacciÃ³n pendiente en Supabase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const DISCOUNT_CODES: Record<string,number> = { PRUEBA100: 100, ASTRAL50: 50, CUMPLE: 20 };
     const discountPct = discountCode ? (DISCOUNT_CODES[String(discountCode).toUpperCase()] || 0) : 0;
-    const finalAmount = discountPct === 100 ? 0.01 : Math.round(productPrice.amount * (1 - discountPct / 100) * 100) / 100;
+    const isFree = discountPct === 100;
+    const finalAmount = isFree ? 0 : Math.round(productPrice.amount * (1 - discountPct / 100) * 100) / 100;
+
     const { data: transaction, error: txError } = await supabase
       .from('transactions')
       .insert({
@@ -162,23 +164,45 @@ export async function POST(request: NextRequest) {
         product_id: PRODUCT_IDS[productSlug],
         birth_data_id: birthRecord.id,
         partner_birth_data_id: partnerBirthId,
-        amount: Math.round(finalAmount * 100) / 100,
+        amount: finalAmount,
         currency: 'USD',
         country_code: countryCode,
-        status: 'pending',
+        status: isFree ? 'completed' : 'pending',
+        completed_at: isFree ? new Date().toISOString() : null,
       })
       .select('id')
       .single();
 
     if (txError || !transaction) {
-      console.error('[Checkout] Error crear transacciÃ³n:', txError);
+      console.error('[Checkout] Error crear transacción:', txError);
       return NextResponse.json(
         { error: 'Error al inicializar el pago. Intenta nuevamente.' },
         { status: 500 }
       );
     }
 
-    // â”€â”€â”€ 9. Crear preferencia de Mercado Pago â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── 100% discount: skip payment, trigger report generation directly ───────
+    if (isFree) {
+      const appUrl = 'https://astralevolution.com';
+
+      await supabase.from('reports').insert({
+        transaction_id: transaction.id,
+        status: 'pending',
+      });
+
+      fetch(`${appUrl}/api/generate-report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactionId: transaction.id }),
+      }).catch((err) => console.error('[Checkout] Error disparando reporte gratuito:', err));
+
+      return NextResponse.json({
+        checkoutUrl: `${appUrl}/gracias?transactionId=${transaction.id}&status=approved`,
+        transactionId: transaction.id,
+      });
+    }
+
+    // ─── 9. Crear preferencia de Mercado Pago ────────────────────────────────
     const appUrl = 'https://astralevolution.com';
 
     const mpPreference = await preference.create({
@@ -188,7 +212,7 @@ export async function POST(request: NextRequest) {
             id: productSlug,
             title: productPrice.title,
             quantity: 1,
-            unit_price: Math.round(finalAmount * 100) / 100,
+            unit_price: finalAmount,
             currency_id: 'USD',
           },
         ],
@@ -206,12 +230,12 @@ export async function POST(request: NextRequest) {
         notification_url: `${appUrl}/api/webhooks/mercadopago`,
         statement_descriptor: 'ASTRAL EVOLUTION',
         expires: true,
-        expiration_date_to: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // 2 horas
+        expiration_date_to: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
       },
     });
 
     if (!mpPreference.init_point) {
-      console.error('[Checkout] MP no retornÃ³ init_point:', mpPreference);
+      console.error('[Checkout] MP no retornó init_point:', mpPreference);
       return NextResponse.json(
         { error: 'Error al crear el enlace de pago. Intenta nuevamente.' },
         { status: 500 }
