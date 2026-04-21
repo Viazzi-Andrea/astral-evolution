@@ -35,7 +35,7 @@ export default function SuccessPage() {
                   <div className="text-left">
                     <h3 className="text-lg font-semibold mb-2">Generación en Proceso</h3>
                     <p className="text-gray-400">
-                      Nuestra IA está analizando tu carta natal y creando tu informe personalizado.
+                      Nuestros astrólogos están analizando tu carta natal y creando tu informe personalizado.
                       Este proceso toma entre 10-30 minutos dependiendo del producto.
                     </p>
                   </div>

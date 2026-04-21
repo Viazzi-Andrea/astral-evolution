@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -214,11 +215,9 @@ export default function AdminTestPage() {
 
                   {selectedReport.ai_response && (
                     <div>
-                      <h4 className="text-white font-semibold mb-2">Respuesta de IA</h4>
-                      <div className="max-h-96 overflow-y-auto p-4 bg-black/30 rounded-lg">
-                        <pre className="text-gray-300 text-xs whitespace-pre-wrap break-words">
-                          {selectedReport.ai_response}
-                        </pre>
+                      <h4 className="text-white font-semibold mb-2">Vista previa del reporte</h4>
+                      <div className="max-h-[600px] overflow-y-auto p-6 bg-white/5 rounded-lg border border-white/10 report-preview">
+                        <ReactMarkdown>{selectedReport.ai_response}</ReactMarkdown>
                       </div>
                     </div>
                   )}

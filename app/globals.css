@@ -81,6 +81,77 @@
   }
 }
 
+/* ─── Estilos para vista previa de reportes ───────────────────────────────── */
+.report-preview h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f0e6ff;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+}
+
+.report-preview h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #c9a96e;
+  border-bottom: 2px solid #c9a96e;
+  padding-bottom: 6px;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  letter-spacing: 0.05em;
+}
+
+.report-preview h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #c4b5fd;
+  border-bottom: 1px solid rgba(201, 169, 110, 0.4);
+  padding-bottom: 4px;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.report-preview p {
+  font-size: 0.95rem;
+  color: #d4c5f5;
+  line-height: 1.85;
+  margin-bottom: 1rem;
+}
+
+/* Capitular: primera letra de cada sección */
+.report-preview h2 + p::first-letter,
+.report-preview h3 + p::first-letter {
+  font-size: 2.8em;
+  font-weight: bold;
+  float: left;
+  line-height: 0.85;
+  margin-right: 6px;
+  margin-top: 4px;
+  color: #c9a96e;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.report-preview strong {
+  color: #f0e6ff;
+  font-weight: 600;
+}
+
+.report-preview em {
+  color: #a78bfa;
+  font-style: italic;
+}
+
+.report-preview ul {
+  padding-left: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.report-preview li {
+  color: #d4c5f5;
+  line-height: 1.75;
+  margin-bottom: 0.4rem;
+}
+
 @layer utilities {
   @keyframes float {
     0%, 100% {

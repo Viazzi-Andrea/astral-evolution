@@ -228,11 +228,11 @@ export async function POST(request: NextRequest) {
     console.log(`[GenerateReport] Llamando a Groq para ${productSlug}...`);
     const rawText = await callAI(systemInstruction, userPrompt);
 
-    // Log para diagnóstico: ver qué formato devuelve la IA
     console.log(`[GenerateReport] Raw output (primeros 200 chars): ${rawText.slice(0, 200)}`);
 
-    const htmlText = markdownToHTML(rawText);
-    const sanitizedText = sanitizeAIOutput(htmlText);
+    // Guardar markdown puro sanitizado (sin convertir a HTML)
+    // La conversión a HTML ocurre solo al generar el email
+    const sanitizedText = sanitizeAIOutput(rawText);
 
     await supabase
       .from('reports')
@@ -247,11 +247,13 @@ export async function POST(request: NextRequest) {
 
     if (userEmail) {
       try {
+        // Convertir markdown → HTML solo para el email
+        const htmlForEmail = markdownToHTML(sanitizedText);
         await sendReportEmail({
           to:         userEmail,
           userName,
           productName,
-          reportHTML: sanitizedText,
+          reportHTML: htmlForEmail,
         });
         await supabase
           .from('reports')

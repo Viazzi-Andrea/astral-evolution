@@ -148,7 +148,7 @@ export default function GraciasPage() {
               </div>
               <span className="text-purple-300">
                 {reportStatus === 'generating'
-                  ? 'Gemini está generando tu lectura astrológica...'
+                  ? 'Estamos preparando tu lectura astrológica...'
                   : 'Tu reporte está en cola de generación...'}
               </span>
             </div>
