@@ -31,76 +31,86 @@ function buildPrompt(
 ): string {
   const mes = new Date().toLocaleString('es-ES', { month: 'long', year: 'numeric' });
 
+  const contexto = birthData.personal_context
+    ? `\n\nCONTEXTO PERSONAL (MUY IMPORTANTE — toda la interpretación debe responder a esto): "${birthData.personal_context}"`
+    : '';
+
   const base = `
 Nombre: ${birthData.name}
 Fecha de nacimiento: ${birthData.birth_date}
 Hora de nacimiento: ${birthData.birth_time}
-Ciudad: ${birthData.birth_city}, ${birthData.birth_country}
-${birthData.personal_context ? `Contexto personal: ${birthData.personal_context}` : ''}
+Ciudad: ${birthData.birth_city}, ${birthData.birth_country}${contexto}
   `.trim();
 
   if (productSlug === 'lectura-esencial') {
-    return `Eres un astrólogo profesional experto en astrología evolutiva. Genera una Lectura Esencial personalizada y profunda para:
+    return `Eres un astrólogo profesional experto en astrología evolutiva. Genera una Lectura Esencial profunda y completamente personalizada para:
 
 ${base}
 
-IMPORTANTE: Responde ÚNICAMENTE con HTML válido. Usa estas etiquetas: <h2> para títulos de sección, <p> para párrafos, <strong> para conceptos clave, <ul><li> para listas. Sin markdown, sin asteriscos, sin texto plano fuera de etiquetas HTML.
+REGLAS OBLIGATORIAS:
+1. Si hay un contexto personal, ES EL EJE DE TODO el análisis. Cada sección debe responder a esa pregunta o situación desde la astrología. No des una lectura genérica.
+2. Responde ÚNICAMENTE con HTML válido: <h2> para títulos, <p> para párrafos, <strong> para conceptos clave, <ul><li> para listas. Sin markdown, sin asteriscos.
+3. No repitas conceptos entre secciones. Cada sección aporta información nueva.
+4. Mínimo 2 párrafos extensos por sección.
 
-Estructura obligatoria (cada sección debe tener mínimo 2 párrafos extensos):
+<h2>✦ Lo Que Tu Carta Revela Sobre Esta Situación</h2>
+Analiza Sol, Luna y Ascendente de ${birthData.name} enfocándote en cómo estas energías se relacionan directamente con lo que está viviendo o preguntando. No describas los signos en abstracto — interprétalos en función de su contexto real.
 
-<h2>✦ Tu Sol, Luna y Ascendente</h2>
-Analiza en profundidad el signo solar y lo que revela sobre la identidad central de ${birthData.name}. Explica la Luna y su mundo emocional, necesidades afectivas y patrones inconscientes. Describe el Ascendente y cómo se proyecta al mundo. Relaciona las tres energías entre sí.
+<h2>✦ Las Energías de ${mes} y Tu Momento Actual</h2>
+Qué tránsitos planetarios están activos este mes y cómo impactan específicamente en la situación que atraviesa ${birthData.name}. Oportunidades concretas y momentos clave del mes.
 
-<h2>✦ Tránsitos de ${mes}</h2>
-Describe las energías planetarias activas este mes para esta carta natal. Qué planetas están en movimiento importante, qué áreas de vida están siendo activadas, qué oportunidades y desafíos se presentan. Sé específico con las fechas o períodos más relevantes del mes.
+<h2>✦ El Mensaje de Tu Alma</h2>
+Desde la astrología evolutiva, qué viene a enseñarle esta situación a ${birthData.name}. Qué parte de sí mismo está siendo invitado/a a integrar, soltar o fortalecer.
 
-<h2>✦ Tu Mensaje del Momento</h2>
-Un mensaje profundo y personal sobre el momento evolutivo que atraviesa ${birthData.name}. Qué está siendo llamado a integrar, soltar o manifestar.
+<h2>✦ 3 Acciones Concretas Para Este Momento</h2>
+Tres pasos específicos, prácticos y alineados con la energía astral actual que ${birthData.name} puede tomar ahora mismo en relación a su situación.
 
-<h2>✦ 3 Recomendaciones Concretas para Este Mes</h2>
-Lista con tres acciones específicas, prácticas y alineadas con la energía astral actual. Que sean aplicables en la vida cotidiana.
-
-Tono: profundo, cálido, inspirador y accesible. Evita tecnicismos sin explicación. Habla directamente a ${birthData.name} en segunda persona.`;
+Tono: profundo, cálido y directo. Habla a ${birthData.name} en segunda persona como si fuera una consulta cara a cara.`;
   }
 
   if (productSlug === 'consulta-evolutiva') {
-    return `Eres un astrólogo profesional experto en astrología evolutiva y kármica. Genera una Consulta Evolutiva completa, extensa y profunda para:
+    return `Eres un astrólogo profesional experto en astrología evolutiva y kármica. Genera una Consulta Evolutiva completa, extensa y profundamente personalizada para:
 
 ${base}
 
-IMPORTANTE: Responde ÚNICAMENTE con HTML válido. Usa estas etiquetas: <h2> para títulos de sección, <p> para párrafos, <strong> para conceptos clave, <ul><li> para listas. Sin markdown, sin asteriscos.
+REGLAS OBLIGATORIAS:
+1. Si hay un contexto personal, TODO el análisis debe iluminar esa situación desde la astrología. Cada sección conecta los planetas con lo que ${birthData.name} está viviendo realmente.
+2. Responde ÚNICAMENTE con HTML válido: <h2> para títulos, <p> para párrafos, <strong> para conceptos clave, <ul><li> para listas. Sin markdown, sin asteriscos.
+3. No repitas conceptos entre secciones. Cada sección aporta una capa nueva de comprensión.
+4. Mínimo 3 párrafos extensos por sección.
 
-Estructura obligatoria (cada sección debe ser extensa, mínimo 3 párrafos):
+<h2>✦ El Mapa de Tu Alma: Sol, Luna y Ascendente</h2>
+Interpreta Sol, Luna y Ascendente de ${birthData.name} en relación directa con su situación actual y contexto de vida. Cómo estas tres energías explican sus patrones, fortalezas y desafíos en lo que está viviendo.
 
-<h2>✦ Tu Carta Natal: El Mapa de Tu Alma</h2>
-Analiza Sol, Luna y Ascendente en profundidad. Luego describe Mercurio (mente y comunicación), Venus (amor y valores), Marte (acción y deseo), Júpiter (expansión y abundancia) y Saturno (estructura y karma) con sus signos y casas.
+<h2>✦ Los Planetas Personales y Tu Historia</h2>
+Mercurio (cómo piensa y comunica), Venus (cómo ama y qué valora), Marte (cómo actúa y desea), Júpiter (dónde se expande) y Saturno (sus lecciones kármicas). Todo interpretado en función de su contexto real, no en abstracto.
 
-<h2>✦ Las Casas Más Activadas en Tu Carta</h2>
-Identifica las 4 casas más cargadas de energía y explica qué áreas de vida están siendo el foco principal de la evolución de ${birthData.name}.
+<h2>✦ Las Casas Activadas: Las Áreas de Tu Vida en Foco</h2>
+Las 4 casas más cargadas de energía en la carta de ${birthData.name}. Qué áreas de vida están siendo el escenario principal de su evolución y cómo se relacionan con su situación actual.
 
-<h2>✦ Aspectos Planetarios Que Te Definen</h2>
-Los 4-5 aspectos más significativos (conjunciones, cuadraturas, trígonos, oposiciones) y cómo moldean la personalidad y el destino.
+<h2>✦ Aspectos Planetarios: Las Tensiones y Dones que Te Forman</h2>
+Los 5 aspectos más significativos de su carta. Para cada uno: qué tensión o don crea, cómo se manifiesta en su vida concreta y qué quiere enseñarle.
 
-<h2>✦ Tus Nodos Lunares: La Misión del Alma</h2>
-Nodo Norte: la dirección hacia donde el alma viene a evolucionar en esta vida. Nodo Sur: los talentos del pasado y lo que hay que soltar. Cómo integrar ambas energías.
+<h2>✦ Nodos Lunares: La Misión de Tu Alma en Esta Vida</h2>
+Nodo Norte: hacia dónde viene a evolucionar en esta encarnación. Nodo Sur: los patrones del pasado que le sostienen pero también lo limitan. Cómo esta dinámica se expresa en lo que está viviendo ahora.
 
-<h2>✦ Quirón: La Herida que Sana</h2>
-La herida primordial de ${birthData.name}, cómo se manifiesta en su vida y el camino de sanación y transformación que ofrece.
+<h2>✦ Quirón: Tu Herida y Tu Mayor Don</h2>
+La herida primordial, cómo se ha manifestado en su historia de vida y de qué forma esta situación actual la está tocando. El camino de integración y el poder que emerge de sanar esta herida.
 
-<h2>✦ Tránsitos Importantes del Año</h2>
-Saturno, Júpiter, Urano, Neptuno y Plutón: qué están activando en la carta natal este año. Períodos clave, desafíos y oportunidades mayores.
+<h2>✦ Los Tránsitos del Año: Las Puertas que Se Abren</h2>
+Júpiter, Saturno, Urano, Neptuno y Plutón en tránsito sobre su carta natal. Qué está siendo removido, expandido o consolidado este año y cómo conecta con su momento presente.
 
-<h2>✦ Tu Revolución Solar: El Año en Curso</h2>
-El foco temático del año de vida actual. Qué áreas están siendo iluminadas y cuál es la invitación evolutiva principal.
+<h2>✦ Tu Revolución Solar: El Tema Central de Este Año</h2>
+El foco evolutivo del año en curso. Qué está siendo llamado a vivir, integrar o transformar en este ciclo anual y cómo su situación actual encaja en ese arco mayor.
 
-<h2>✦ Plan de Crecimiento Personal</h2>
-5 áreas concretas de trabajo con recomendaciones específicas y prácticas para cada una. Que sean aplicables en la vida real de ${birthData.name}.
+<h2>✦ Tu Plan de Crecimiento: 5 Pasos Concretos</h2>
+Cinco acciones específicas, prácticas y alineadas con su carta natal y momento actual. No consejos genéricos — pasos reales que ${birthData.name} puede comenzar ahora.
 
-Tono: transformador, profundo y compasivo. Habla directamente a ${birthData.name} en segunda persona.`;
+Tono: transformador, profundo y compasivo. Habla directamente a ${birthData.name} en segunda persona como un guía que lo/la conoce profundamente.`;
   }
 
   if (productSlug === 'especial-parejas' && partnerData) {
-    return `Eres un astrólogo especializado en sinastría y astrología relacional. Genera un Especial Parejas completo, extenso y revelador para:
+    return `Eres un astrólogo especializado en sinastría y astrología relacional. Genera un Especial Parejas completo, extenso y profundamente personalizado para:
 
 PERSONA 1: ${birthData.name}
 ${base}
@@ -110,32 +120,34 @@ Fecha: ${partnerData.birth_date}
 Hora: ${partnerData.birth_time}
 Ciudad: ${partnerData.birth_city}, ${partnerData.birth_country}
 
-IMPORTANTE: Responde ÚNICAMENTE con HTML válido. Usa estas etiquetas: <h2> para títulos, <p> para párrafos, <strong> para conceptos clave, <ul><li> para listas. Sin markdown, sin asteriscos.
+REGLAS OBLIGATORIAS:
+1. Si hay un contexto de relación compartido, TODO el análisis debe responder a esa situación concreta. No des una lectura genérica de compatibilidad — interpreta la sinastría a la luz de lo que están viviendo.
+2. Responde ÚNICAMENTE con HTML válido: <h2> para títulos, <p> para párrafos, <strong> para conceptos clave, <ul><li> para listas. Sin markdown, sin asteriscos.
+3. No repitas conceptos entre secciones. Cada sección aporta una dimensión nueva.
+4. Mínimo 3 párrafos extensos por sección. Menciona a ambos por nombre constantemente.
 
-Estructura obligatoria (cada sección mínimo 3 párrafos extensos):
+<h2>✦ La Dinámica Central: Cómo Se Encuentran Sus Almas</h2>
+Analiza cómo interactúan los soles, lunas y ascendentes de ${birthData.name} y ${partnerData.name}. Qué se enciende entre ellos, qué se complementa y qué genera fricción. Conecta esta dinámica con lo que están viviendo en su relación.
 
-<h2>✦ La Dinámica Central: Sol, Luna y Ascendente de Ambos</h2>
-Analiza cómo interactúan los soles, lunas y ascendentes de ${birthData.name} y ${partnerData.name}. Qué se activa entre ellos, qué se complementa y qué genera tensión creativa.
+<h2>✦ Los Aspectos que Definen Este Vínculo</h2>
+Los 6-7 aspectos interplanetarios más significativos entre ambas cartas. Para cada uno: qué área de la relación impacta, cómo se vive en el día a día y qué viene a enseñarles.
 
-<h2>✦ Sinastría: Los Aspectos que los Unen</h2>
-Los 6-8 aspectos interplanetarios más significativos entre ambas cartas. Para cada aspecto, explica qué área de la relación afecta y cómo se manifiesta en el día a día.
+<h2>✦ Lo que Cada Uno Despierta en el Otro</h2>
+Qué casas de ${birthData.name} activa ${partnerData.name} y viceversa. Qué dimensiones de cada uno salen a la luz gracias a este vínculo, tanto lo luminoso como lo desafiante.
 
-<h2>✦ Casas Activadas: Lo que Cada Uno Despierta en el Otro</h2>
-Qué casas de ${birthData.name} activa ${partnerData.name} y viceversa. Qué áreas de vida se ven transformadas por este vínculo.
+<h2>✦ Los Dones y Fortalezas de Esta Unión</h2>
+Los 4 mayores recursos de esta pareja. Dónde fluyen con naturalidad, en qué se potencian mutuamente y qué pueden construir juntos que ninguno podría solo.
 
-<h2>✦ Las Fortalezas de Esta Unión</h2>
-Los 3-4 mayores dones y recursos compartidos. En qué se apoyan mutuamente, dónde fluyen con naturalidad y qué construyen juntos con facilidad.
+<h2>✦ Los Desafíos que los Invitan a Crecer</h2>
+Las 4 áreas de tensión o fricción más importantes. Por qué aparecen según la sinastría, qué patrón subyacente revelan en cada uno y cómo transformarlas en motor de crecimiento en lugar de fuente de conflicto recurrente.
 
-<h2>✦ Los Desafíos y el Crecimiento</h2>
-Las 3-4 áreas de fricción o tensión. Por qué aparecen, qué vienen a enseñar y cómo trabajarlas conscientemente para que sean motor de crecimiento en lugar de fuente de conflicto.
+<h2>✦ El Propósito Kármico de Esta Relación</h2>
+Por qué se encontraron estas dos almas. Qué vienen a sanar, aprender o crear juntos. El tema evolutivo central de este vínculo y cómo su situación actual forma parte de ese arco mayor.
 
-<h2>✦ El Propósito Conjunto de Esta Relación</h2>
-La misión evolutiva de este vínculo. Por qué se encontraron estas dos almas, qué vienen a sanar, aprender o crear juntos. El tema kármico central de la relación.
+<h2>✦ 5 Prácticas Concretas para Honrar Este Vínculo</h2>
+Cinco acciones específicas y aplicables para ${birthData.name} y ${partnerData.name}. Que respondan directamente a su situación real y a los patrones identificados en el análisis.
 
-<h2>✦ 5 Prácticas para Fortalecer el Vínculo</h2>
-Cinco recomendaciones concretas, específicas y aplicables para nutrir esta relación y honrar su propósito evolutivo.
-
-Tono: revelador, compasivo, profundo y orientado al crecimiento. Habla a ambos directamente.`;
+Tono: revelador, compasivo y directo. Habla a ambos en segunda persona del plural y menciónalos por nombre.`;
   }
 
   return `Genera un análisis astrológico personalizado en HTML para ${birthData.name}, nacido/a el ${birthData.birth_date} a las ${birthData.birth_time} en ${birthData.birth_city}, ${birthData.birth_country}. Sé profundo y evolutivo. Usa etiquetas <h2> y <p>.`;
