@@ -9,7 +9,6 @@ import { createClient } from '@supabase/supabase-js';
 import { GenerateReportSchema, sanitizeAIOutput } from '@/lib/validations/schemas';
 import { sendReportEmail } from '@/lib/email/send-report';
 
-export const maxDuration = 60;
 
 // â”€â”€â”€ Prompts por producto â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function buildPrompt(
@@ -105,7 +104,7 @@ async function callGemini(prompt: string): Promise<string> {
   if (!apiKey) throw new Error('GEMINI_API_KEY no configurada');
 
   const models = ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-2.0-flash', 'gemini-2.5-pro'];
-  const maxRetries = 4;
+  const maxRetries = 1;
 
   const body = JSON.stringify({
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -146,10 +145,7 @@ async function callGemini(prompt: string): Promise<string> {
       if (res.status === 404) break;
 
       // Si es 503 (demanda alta) y quedan intentos, esperar y reintentar
-      if (res.status === 503 && attempt < maxRetries) {
-        await new Promise(r => setTimeout(r, attempt * 3000));
-        continue;
-      }
+      if (res.status === 503) break;
 
       // Cualquier otro error fatal
       if (attempt === maxRetries) throw new Error(`Gemini ${res.status}: ${err}`);
