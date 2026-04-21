@@ -102,37 +102,59 @@ async function callGemini(prompt: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY?.replace(/[\r\n\s]/g, '');
   if (!apiKey) throw new Error('GEMINI_API_KEY no configurada');
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const models = ['gemini-2.5-flash', 'gemini-2.0-flash-lite'];
+  const maxRetries = 3;
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.8,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 4096,
-      },
-      safetySettings: [
-        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-      ],
-    }),
+  const body = JSON.stringify({
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.8,
+      topK: 40,
+      topP: 0.95,
+      maxOutputTokens: 4096,
+    },
+    safetySettings: [
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+    ],
   });
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Gemini ${res.status}: ${err}`);
+  for (const model of models) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) throw new Error('Gemini no retornÃ³ texto');
+        return text;
+      }
+
+      const err = await res.text();
+
+      // Si el modelo no está disponible, pasar al siguiente modelo
+      if (res.status === 404) break;
+
+      // Si es 503 (demanda alta) y quedan intentos, esperar y reintentar
+      if (res.status === 503 && attempt < maxRetries) {
+        await new Promise(r => setTimeout(r, attempt * 2000));
+        continue;
+      }
+
+      // Cualquier otro error fatal
+      if (attempt === maxRetries) throw new Error(`Gemini ${res.status}: ${err}`);
+    }
   }
 
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Gemini no retornÃ³ texto');
-  return text;
+  throw new Error('Gemini no disponible tras varios intentos');
 }
 
 // â”€â”€â”€ Handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
