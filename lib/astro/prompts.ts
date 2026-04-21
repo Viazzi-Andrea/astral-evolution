@@ -293,47 +293,47 @@ ${synAspects.length > 0 ? synAspects.slice(0, 12).map(formatAspect).join('\n') :
 
 TAREA: Genera un "Especial Parejas — Lectura de Sinastría" para ${name1} y ${name2}.
 Extensión: 1500–2000 palabras. Con profundidad real.
+IMPORTANTE: No uses "él" ni "ella" — usa siempre los nombres (${name1} y ${name2}) directamente.
 
 ---
 
-# ✦ SINASTRÍA — ${name1.toUpperCase()} & ${name2.toUpperCase()}
+# ✦ ${name1.toUpperCase()} & ${name2.toUpperCase()}
 
-## I. DOS MUNDOS QUE SE ENCUENTRAN
-Describe brevemente la "personalidad astrológica" de cada uno (Sol/Luna/ASC).
-¿Qué trae cada persona a la relación?
+## I. ${name1} & ${name2} — Dos Mundos que se Encuentran
+Describe la "personalidad astrológica" de cada persona (Sol, Luna y Ascendente).
+¿Qué energía, necesidades y forma de relacionarse trae cada una a este vínculo?
 
-## II. EL VÍNCULO SOLAR Y LUNAR
-- Sol de ${name1} (${chart1.chartSummary.sunSign}) con Sol de ${name2} (${chart2.chartSummary.sunSign}): 
-  ¿Cómo se encuentran sus esencias? ¿Complementariedad o fricción creativa?
-- Luna de ${name1} (${chart1.chartSummary.moonSign}) con Luna de ${name2} (${chart2.chartSummary.moonSign}): 
-  La resonancia emocional. ¿Se sienten "en casa" juntos?
+## II. El Corazón de la Conexión
+- Sol de ${name1} (${chart1.chartSummary.sunSign}) con Sol de ${name2} (${chart2.chartSummary.sunSign}):
+  ¿Cómo se encuentran sus esencias? ¿Se complementan o generan fricción creativa?
+- Luna de ${name1} (${chart1.chartSummary.moonSign}) con Luna de ${name2} (${chart2.chartSummary.moonSign}):
+  La resonancia emocional. ¿Se sienten seguros y en casa juntos o hay tensión emocional de fondo?
 
-## III. LOS ASPECTOS CLAVE DE SINASTRÍA
+## III. Lo que los Une y lo que los Tensiona
 Analiza los 4–5 aspectos de sinastría más significativos.
-Para cada uno: qué activa en cada persona, cómo se vive en la relación cotidiana,
-y qué desafío o don trae.
+Para cada uno: qué activa en cada persona, cómo se vive en el día a día de la relación,
+y qué desafío o don concreto trae. Sé honesto sobre los aspectos difíciles.
 
-## IV. VENUS Y MARTE: EL LENGUAJE DEL AMOR Y EL DESEO
-- Venus de ${name1} (${chart1.planets.find(p => p.name === 'Venus')?.degreeStr}) 
-  con Venus/Marte de ${name2}: la química afectiva.
-- Cómo cada uno da y recibe amor. ¿Hablan el mismo idioma emocional?
+## IV. Amor, Atracción y Deseo
+- Cómo da y recibe amor ${name1} (Venus en ${chart1.planets.find(p => p.name === 'Venus')?.degreeStr}).
+- Cómo da y recibe amor ${name2} (Venus en ${chart2.planets.find(p => p.name === 'Venus')?.degreeStr}).
+- ¿Hablan el mismo idioma afectivo o cada uno expresa y necesita el amor de manera diferente?
+- La atracción y el deseo: qué los acerca físicamente y emocionalmente.
 
-## V. SATURNO EN LA RELACIÓN
-Si Saturno de uno aspecto puntos clave del otro: karma y compromiso.
-Si no hay aspectos de Saturno relevantes, habla sobre los compromisos implícitos 
-que la relación demanda según sus Saturno natales.
+## V. Los Compromisos que Esta Relación Pide
+Qué exige esta relación de cada persona para poder sostenerse y crecer.
+Si hay aspectos de Saturno entre las cartas, explica qué estructura o responsabilidad traen.
+Si no, habla sobre los compromisos implícitos que la combinación de sus cartas demanda.
+Sin rodeos: ¿qué tendría que cambiar en cada uno para que esto funcione?
 
-## VI. EL PROPÓSITO COMPARTIDO
-Los Nodos Lunares de ambos y lo que sugieren sobre el "por qué" 
-se encontraron estas dos almas. ¿Qué vienen a aprender juntos?
+## VI. Por Qué se Encontraron: El Propósito Compartido
+Los Nodos Lunares de ambas personas y lo que sugieren sobre el "por qué" de este encuentro.
+¿Qué vienen a aprender, sanar o construir juntos? ¿Qué los trajo hasta aquí?
 
-## VII. SOMBRAS Y LUCES
-Un párrafo honesto sobre los desafíos reales de esta combinación.
-Un párrafo sobre los regalos únicos que esta relación puede ofrecer.
-Sin suavizar ni exagerar — con la honestidad compasiva de Liz Greene.
-
-## VIII. SÍNTESIS: EL CAMPO ENTRE DOS
-¿Qué "tercer ser" crea esta relación? ¿Cuál es la invitación evolutiva para ambos?
+## VII. Síntesis: Lo que Construyen Juntos
+Un cierre integrador: ¿qué "tercer ser" nace de esta unión?
+¿Cuál es la invitación evolutiva para ${name1} y ${name2} como pareja?
+Un párrafo honesto sobre los desafíos reales y uno sobre los regalos únicos de este vínculo.
 
 ---`.trim();
 
