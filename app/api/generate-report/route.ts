@@ -102,8 +102,8 @@ async function callGemini(prompt: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY?.replace(/[\r\n\s]/g, '');
   if (!apiKey) throw new Error('GEMINI_API_KEY no configurada');
 
-  const models = ['gemini-2.5-flash', 'gemini-2.0-flash-lite'];
-  const maxRetries = 3;
+  const models = ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-2.0-flash', 'gemini-2.5-pro'];
+  const maxRetries = 4;
 
   const body = JSON.stringify({
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -145,7 +145,7 @@ async function callGemini(prompt: string): Promise<string> {
 
       // Si es 503 (demanda alta) y quedan intentos, esperar y reintentar
       if (res.status === 503 && attempt < maxRetries) {
-        await new Promise(r => setTimeout(r, attempt * 2000));
+        await new Promise(r => setTimeout(r, attempt * 5000));
         continue;
       }
 
