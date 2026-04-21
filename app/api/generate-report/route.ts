@@ -9,6 +9,8 @@ import { createClient } from '@supabase/supabase-js';
 import { GenerateReportSchema, sanitizeAIOutput } from '@/lib/validations/schemas';
 import { sendReportEmail } from '@/lib/email/send-report';
 
+export const maxDuration = 60;
+
 // â”€â”€â”€ Prompts por producto â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function buildPrompt(
   productSlug: string,
@@ -145,7 +147,7 @@ async function callGemini(prompt: string): Promise<string> {
 
       // Si es 503 (demanda alta) y quedan intentos, esperar y reintentar
       if (res.status === 503 && attempt < maxRetries) {
-        await new Promise(r => setTimeout(r, attempt * 5000));
+        await new Promise(r => setTimeout(r, attempt * 3000));
         continue;
       }
 
