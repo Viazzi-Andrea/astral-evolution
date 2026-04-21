@@ -75,16 +75,15 @@ async function buildPrompt(
   return buildEssentialReadingPrompt(chart, birthData.name, context);
 }
 
-// ─── Llamada a Groq ───────────────────────────────────────────────────────────
-async function callGroq(systemInstruction: string, userPrompt: string): Promise<string> {
+// ─── Groq (OpenAI-compatible) ─────────────────────────────────────────────────
+async function tryGroq(systemInstruction: string, userPrompt: string): Promise<string | null> {
   const apiKey = process.env.GROQ_API_KEY?.replace(/[\r\n\s]/g, '');
-  if (!apiKey) throw new Error('GROQ_API_KEY no configurada');
+  if (!apiKey) return null;
 
   const models = [
     'llama-3.3-70b-versatile',
     'llama-3.1-8b-instant',
     'gemma2-9b-it',
-    'llama3-8b-8192',
   ];
 
   for (let i = 0; i < models.length; i++) {
@@ -93,10 +92,7 @@ async function callGroq(systemInstruction: string, userPrompt: string): Promise<
     const model = models[i];
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
         model,
         messages: [
@@ -111,18 +107,59 @@ async function callGroq(systemInstruction: string, userPrompt: string): Promise<
     if (res.ok) {
       const data = await res.json();
       const text = data?.choices?.[0]?.message?.content;
-      if (!text) throw new Error('Groq no retornó texto');
-      console.log(`[GenerateReport] Modelo usado: ${model}`);
-      return text;
+      if (text) {
+        console.log(`[GenerateReport] Groq OK — modelo: ${model}`);
+        return text;
+      }
     }
 
-    const err = await res.text();
-    console.warn(`[GenerateReport] ${model} falló (${res.status}), probando siguiente...`);
-    if (res.status === 503 || res.status === 429 || res.status === 413 || res.status === 400) continue;
-    throw new Error(`Groq ${res.status}: ${err}`);
+    const status = res.status;
+    console.warn(`[GenerateReport] Groq ${model} falló (${status})`);
+    if (status !== 503 && status !== 429 && status !== 413 && status !== 400) break;
   }
 
-  throw new Error('Groq no disponible, intentá en unos minutos');
+  return null;
+}
+
+// ─── Gemini fallback ──────────────────────────────────────────────────────────
+async function tryGemini(systemInstruction: string, userPrompt: string): Promise<string | null> {
+  const apiKey = process.env.GEMINI_API_KEY?.replace(/[\r\n\s]/g, '');
+  if (!apiKey) return null;
+
+  const models = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-lite'];
+
+  for (const model of models) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: `${systemInstruction}\n\n${userPrompt}` }] }],
+        generationConfig: { maxOutputTokens: 4000, temperature: 0.8 },
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) {
+        console.log(`[GenerateReport] Gemini OK — modelo: ${model}`);
+        return text;
+      }
+    }
+    console.warn(`[GenerateReport] Gemini ${model} falló (${res.status})`);
+  }
+
+  return null;
+}
+
+// ─── Orquestador: Groq primero, Gemini si falla ───────────────────────────────
+async function callAI(systemInstruction: string, userPrompt: string): Promise<string> {
+  const text = await tryGroq(systemInstruction, userPrompt)
+            ?? await tryGemini(systemInstruction, userPrompt);
+
+  if (!text) throw new Error('Servicio de IA no disponible, intentá en unos minutos');
+  return text;
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
@@ -189,7 +226,7 @@ export async function POST(request: NextRequest) {
     const { systemInstruction, userPrompt } = await buildPrompt(productSlug, birthData, partnerData);
 
     console.log(`[GenerateReport] Llamando a Groq para ${productSlug}...`);
-    const rawText = await callGroq(systemInstruction, userPrompt);
+    const rawText = await callAI(systemInstruction, userPrompt);
 
     // Convertir markdown a HTML si Groq devuelve markdown (los prompts de lib/astro/prompts.ts usan # y ##)
     const htmlText = markdownToHTML(rawText);
