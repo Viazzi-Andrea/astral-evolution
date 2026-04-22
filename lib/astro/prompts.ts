@@ -241,6 +241,7 @@ ${contextNote}
 
 TAREA: Genera una "Consulta Evolutiva Completa" para ${name}.
 Extensión total: 1800–2200 palabras. Escribe con profundidad real; no resumas.
+DISTRIBUCIÓN DE ESPACIO: Secciones I–VII: máximo 250 palabras cada una. Sección IX (CONCLUSIÓN): mínimo 200 palabras, siempre completa. Si el espacio se agota, resumí las secciones IV–VII para garantizar que la Conclusión se genere íntegra.
 
 ---
 
@@ -339,8 +340,14 @@ ASPECTOS DE SINASTRÍA (posiciones de ${name1} vs posiciones de ${name2}):
 ${synAspects.length > 0 ? synAspects.slice(0, 7).map(formatAspect).join('\n') : 'Calcular manualmente con los datos anteriores.'}
 
 TAREA: Genera un "Especial Parejas — Lectura de Sinastría" para ${name1} y ${name2}.
-Extensión: 1500–2000 palabras. Con profundidad real.
-IMPORTANTE: No uses "él" ni "ella" — usa siempre los nombres (${name1} y ${name2}) directamente.
+Extensión total: 1800–2200 palabras. Con profundidad real.
+IMPORTANTE — DISTRIBUCIÓN DE ESPACIO: Para garantizar que el reporte llegue completo sin truncarse, respeta estos límites por sección:
+· Secciones I, II, IV: máximo 250 palabras cada una.
+· Secciones III, V, VI: máximo 300 palabras cada una.
+· Sección VII (Síntesis): máximo 200 palabras.
+· Sección VIII (CONCLUSIÓN): mínimo 200 palabras — siempre debe completarse íntegramente.
+Si ves que te acercás al límite, resumí las secciones III-VI para garantizar que la Conclusión se genere completa.
+PROHIBIDO: No uses "él" ni "ella" — usa siempre los nombres (${name1} y ${name2}) directamente.
 
 ---
 

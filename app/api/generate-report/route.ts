@@ -59,7 +59,7 @@ async function buildPromptAndChart(
     birth_city: string;
     birth_country: string;
   } | null
-): Promise<{ systemInstruction: string; userPrompt: string; chartDataUrl: string }> {
+): Promise<{ systemInstruction: string; userPrompt: string; svg: string }> {
 
   if (productSlug === 'especial-parejas' && partnerData) {
     const [chart1, chart2] = await Promise.all([
@@ -69,20 +69,19 @@ async function buildPromptAndChart(
     const svg = generateSynastryChartSVG(chart1, birthData.name, chart2, partnerData.name);
     return {
       ...buildSynastryPrompt(chart1, birthData.name, chart2, partnerData.name, birthData.personal_context ?? undefined),
-      chartDataUrl: svgToDataUrl(svg),
+      svg,
     };
   }
 
   const chart = await computeChart(birthData);
   const context = birthData.personal_context ?? undefined;
   const svg = generateNatalChartSVG(chart, birthData.name);
-  const chartDataUrl = svgToDataUrl(svg);
 
   if (productSlug === 'consulta-evolutiva') {
-    return { ...buildEvolutionaryConsultationPrompt(chart, birthData.name, context), chartDataUrl };
+    return { ...buildEvolutionaryConsultationPrompt(chart, birthData.name, context), svg };
   }
 
-  return { ...buildEssentialReadingPrompt(chart, birthData.name, context), chartDataUrl };
+  return { ...buildEssentialReadingPrompt(chart, birthData.name, context), svg };
 }
 
 // ─── Groq (OpenAI-compatible) ─────────────────────────────────────────────────
@@ -136,16 +135,18 @@ async function tryGemini(systemInstruction: string, userPrompt: string): Promise
   const apiKey = process.env.GEMINI_API_KEY?.replace(/[\r\n\s]/g, '');
   if (!apiKey) return null;
 
-  const models = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-lite'];
+  // gemini-2.5-flash first: supports up to 65k output tokens (eliminates truncation)
+  const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
 
   for (const model of models) {
+    const maxOutputTokens = model === 'gemini-2.5-flash' ? 16000 : 8192;
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: `${systemInstruction}\n\n${userPrompt}` }] }],
-        generationConfig: { maxOutputTokens: 8000, temperature: 0.8 },
+        generationConfig: { maxOutputTokens, temperature: 0.8 },
       }),
     });
 
@@ -233,7 +234,22 @@ export async function POST(request: NextRequest) {
     console.log(`[GenerateReport] Calculando carta natal para ${birthData.name} en ${birthData.birth_city}...`);
 
     // Calcular efemérides reales, construir prompt y generar SVG
-    const { systemInstruction, userPrompt, chartDataUrl } = await buildPromptAndChart(productSlug, birthData, partnerData);
+    const { systemInstruction, userPrompt, svg } = await buildPromptAndChart(productSlug, birthData, partnerData);
+
+    // Subir SVG a Supabase Storage para obtener URL pública (Gmail bloquea data: URLs)
+    let chartImageUrl: string | undefined;
+    try {
+      const chartPath = `charts/${transactionId}.svg`;
+      await supabase.storage.from('charts').upload(chartPath, Buffer.from(svg, 'utf-8'), {
+        contentType: 'image/svg+xml',
+        upsert: true,
+      });
+      const { data: urlData } = supabase.storage.from('charts').getPublicUrl(chartPath);
+      chartImageUrl = urlData.publicUrl;
+      console.log(`[GenerateReport] Chart SVG subido: ${chartImageUrl}`);
+    } catch (chartErr) {
+      console.warn('[GenerateReport] ⚠️ Chart upload falló, se omite imagen en email:', chartErr);
+    }
 
     console.log(`[GenerateReport] Llamando a Groq para ${productSlug}...`);
     const rawText = await callAI(systemInstruction, userPrompt);
@@ -263,7 +279,7 @@ export async function POST(request: NextRequest) {
           userName,
           productName,
           reportHTML:   htmlForEmail,
-          chartDataUrl,
+          chartDataUrl: chartImageUrl,
         });
         await supabase
           .from('reports')
