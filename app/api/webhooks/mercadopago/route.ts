@@ -116,6 +116,9 @@ async function sendWhatsAppNotification(
   }
 }
 
+// ─── Vercel function config ───────────────────────────────────────────────────
+export const maxDuration = 60;
+
 // ─── Handler principal ────────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
   // 1. Leer body como texto para verificar firma
@@ -233,22 +236,17 @@ export async function POST(request: NextRequest) {
     console.error('[Webhook MP] Error creando registro de reporte:', reportError);
   }
 
-  // 8. Generar reporte (await para que no se cancele al devolver respuesta)
+  // 8. Disparar generación de reporte (fire-and-forget: MP no espera el resultado)
+  // generate-report guarda su propio estado en Supabase con idempotencia
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://astralevolution.com';
-  try {
-    const genRes = await fetch(`${appUrl}/api/generate-report`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ transactionId }),
-    });
-    if (!genRes.ok) {
-      console.error('[Webhook MP] Error en generate-report:', genRes.status);
-    } else {
-      console.log('[Webhook MP] Reporte generado OK');
-    }
-  } catch (err) {
-    console.error('[Webhook MP] Error disparando generación:', err);
-  }
+  fetch(`${appUrl}/api/generate-report`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ transactionId }),
+  }).then(res => {
+    if (!res.ok) console.error('[Webhook MP] generate-report respondió:', res.status);
+    else console.log('[Webhook MP] generate-report iniciado OK');
+  }).catch(err => console.error('[Webhook MP] Error disparando generación:', err));
 
   // 9. Notificación WhatsApp
   const productName = (updatedTx as any).products?.name_es ?? 'Producto desconocido';

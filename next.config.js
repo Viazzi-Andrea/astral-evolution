@@ -3,6 +3,10 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Expone ADMIN_SECRET al bundle del Edge Middleware en build time (no llega al cliente porque ningún componente client lo usa)
+  env: {
+    ADMIN_SECRET: process.env.ADMIN_SECRET,
+  },
   images: { unoptimized: true },
 
   // ─── Headers de seguridad adicionales (refuerza middleware.ts) ───────────

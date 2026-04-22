@@ -39,6 +39,32 @@ setInterval(() => {
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // ─── HTTP Basic Auth para panel de admin ───
+  if (pathname.startsWith('/admin-test') || pathname.startsWith('/api/admin')) {
+    // process.env.ADMIN_SECRET llega via next.config.js env (build-time).
+    // El fallback hardcoded actúa si el env var falla en edge.
+    const adminSecret = process.env.ADMIN_SECRET || 'astral2024admin';
+
+    const authHeader = request.headers.get('authorization');
+    let ok = false;
+
+    if (authHeader?.startsWith('Basic ')) {
+      try {
+        const decoded = atob(authHeader.slice(6));
+        const password = decoded.split(':').slice(1).join(':');
+        ok = password === adminSecret;
+      } catch { /* base64 inválido */ }
+    }
+
+    if (!ok) {
+      return new NextResponse('Acceso restringido', {
+        status: 401,
+        headers: { 'WWW-Authenticate': 'Basic realm="Admin Astral Evolution"' },
+      });
+    }
+  }
+
   const ip =
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     request.headers.get('x-real-ip') ||

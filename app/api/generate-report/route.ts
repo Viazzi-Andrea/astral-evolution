@@ -157,8 +157,12 @@ async function tryGemini(systemInstruction: string, userPrompt: string): Promise
         console.log(`[GenerateReport] Gemini OK — modelo: ${model}`);
         return text;
       }
+      // Respuesta OK pero sin texto — loguear estructura
+      console.warn(`[GenerateReport] Gemini ${model} sin texto — finishReason: ${data?.candidates?.[0]?.finishReason}`);
+    } else {
+      const errBody = await res.text().catch(() => '(sin body)');
+      console.warn(`[GenerateReport] Gemini ${model} falló (${res.status}): ${errBody.slice(0, 300)}`);
     }
-    console.warn(`[GenerateReport] Gemini ${model} falló (${res.status})`);
   }
 
   return null;
@@ -172,6 +176,9 @@ async function callAI(systemInstruction: string, userPrompt: string): Promise<st
   if (!text) throw new Error('Servicio de IA no disponible, intentá en unos minutos');
   return text;
 }
+
+// ─── Vercel function config ───────────────────────────────────────────────────
+export const maxDuration = 300;
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
@@ -195,10 +202,24 @@ export async function POST(request: NextRequest) {
     { auth: { persistSession: false } }
   );
 
-  await supabase
+  // Idempotencia atómica: solo proceder si el reporte está en 'pending' o 'failed'
+  // Si ya está 'generating' o 'completed', otro proceso lo tomó — retornar sin error
+  const { data: claimed } = await supabase
     .from('reports')
     .update({ status: 'generating' })
-    .eq('transaction_id', transactionId);
+    .eq('transaction_id', transactionId)
+    .in('status', ['pending', 'failed'])
+    .select('id')
+    .maybeSingle();
+
+  if (!claimed) {
+    const { data: current } = await supabase
+      .from('reports')
+      .select('status')
+      .eq('transaction_id', transactionId)
+      .maybeSingle();
+    return NextResponse.json({ success: true, status: current?.status ?? 'processing' });
+  }
 
   try {
     const { data: tx, error: txError } = await supabase
