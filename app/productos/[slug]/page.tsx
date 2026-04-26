@@ -170,6 +170,7 @@ export default function ProductPage() {
   const [authPassword, setAuthPassword] = useState('');
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [resetSent, setResetSent] = useState(false);
 
   // ── Verificar sesión de auth ─────────────────────────────────────────────────
   useEffect(() => {
@@ -182,6 +183,18 @@ export default function ProductPage() {
     });
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  const handleForgotPassword = async () => {
+    if (!authEmail) { setAuthError('Ingresá tu email primero.'); return; }
+    setAuthSubmitting(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(authEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setAuthSubmitting(false);
+    if (error) { setAuthError(error.message); return; }
+    setResetSent(true);
+    setAuthError(null);
+  };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -494,6 +507,22 @@ export default function ProductPage() {
                     >
                       {authSubmitting ? 'Procesando...' : authMode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
                     </Button>
+
+                    {authMode === 'login' && !resetSent && (
+                      <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        disabled={authSubmitting}
+                        className="w-full text-sm text-gray-400 hover:text-white transition-colors text-center"
+                      >
+                        ¿Olvidaste tu contraseña?
+                      </button>
+                    )}
+                    {resetSent && (
+                      <p className="text-sm text-green-400 text-center">
+                        Te enviamos un link para restablecer tu contraseña. Revisá tu email.
+                      </p>
+                    )}
                   </form>
 
                   <p className="text-xs text-gray-500 text-center mt-4">

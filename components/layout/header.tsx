@@ -22,6 +22,7 @@ export function Header() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [resetSent, setResetSent] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -74,6 +75,17 @@ export function Header() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) { alert('Ingresá tu email primero.'); return; }
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setLoading(false);
+    if (error) { alert(error.message); return; }
+    setResetSent(true);
   };
 
   const handleLogout = async () => {
@@ -196,10 +208,25 @@ export function Header() {
             >
               {loading ? 'Procesando...' : isLogin ? 'Iniciar sesión' : 'Crear cuenta'}
             </Button>
-            <div className="text-center">
+            {resetSent && (
+              <p className="text-sm text-green-400 text-center">
+                Te enviamos un link para restablecer tu contraseña. Revisá tu email.
+              </p>
+            )}
+            <div className="flex flex-col items-center gap-2">
+              {isLogin && (
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={loading}
+                  className="text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => setIsLogin(!isLogin)}
+                onClick={() => { setIsLogin(!isLogin); setResetSent(false); }}
                 className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
               >
                 {isLogin ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
