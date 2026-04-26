@@ -303,14 +303,19 @@ Aspectos principales: ${chart.aspects.slice(0, 6).map(formatAspect).join(' | ')}
 
 ## VII. Tu Identidad, Raíces, Relaciones y Vocación
 
-Analizá el eje de las cuatro casas más importantes (1, 4, 7 y 10) como los cuatro pilares de la vida de ${name}:
-- Casa 1: cómo se presenta al mundo
-- Casa 4: sus raíces, hogar y sentido de pertenencia
-- Casa 7: qué busca y proyecta en sus relaciones
-- Casa 10: su vocación y lugar en el mundo
+Cuatro párrafos, uno por eje:
+
+**Cómo te presentás al mundo** (Casa 1 — Ascendente en ${chart.chartSummary.ascendantSign}): cómo arranca ${name} en cualquier situación nueva, qué imagen proyecta antes de que la conozcan de verdad.
+
+**Tus raíces y sentido de pertenencia** (Casa 4 — ${chart.planets.find(p => p.name === 'Sol') ? `Sol en ${chart.chartSummary.sunSign}` : 'cúspide'}): qué necesita ${name} para sentirse en casa, de dónde viene su sentido de seguridad más profundo.
+
+**Qué busca en los vínculos** (Casa 7): qué proyecta ${name} en sus parejas y socios, qué tipo de personas la complementan y por qué.
+
+**Su vocación y misión en el mundo** (Casa 10 — ${chart.planets.find(p => p.name === 'Marte') ? `Marte en ${chart.planets.find(p => p.name === 'Marte')?.degreeStr}` : ''}, Saturno, Medio Cielo en ${chart.midheaven.degreeStr}):
+Describí qué tipo de trabajo y entorno profesional hace que ${name} se sienta realizada. Luego listá entre 3 y 5 áreas o profesiones específicas que se alinean con su carta — no genéricas ("trabajos creativos") sino concretas (ej: "mediación de conflictos", "psicología clínica", "diseño de espacios", "emprendimiento social"). Para cada una explicá brevemente por qué encaja con su configuración. Cerrá con una oración que invite a explorar esto en profundidad: "Tu carta tiene mucho más para decirte sobre tu misión profesional específica — esta es solo una primera aproximación."
 ${chart.chartSummary.angularPlanets.length > 0
-  ? `Planetas en estas casas: ${chart.chartSummary.angularPlanets.join(', ')} — describí su influencia concreta.`
-  : 'No hay planetas en estas casas — describí las cúspides y lo que revelan sobre cada área.'}
+  ? `Planetas en casas angulares: ${chart.chartSummary.angularPlanets.join(', ')}`
+  : ''}
 
 ## VIII. Tu Proyecto de Vida
 

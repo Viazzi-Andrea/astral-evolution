@@ -66,6 +66,62 @@ function buildCards(html: string): string {
 }
 
 // ─── Email completo ───────────────────────────────────────────────────────────
+type UpsellCard = { title: string; desc: string; url: string; cta: string };
+
+const UPSELL_CARDS: Record<string, UpsellCard> = {
+  evolutiva: {
+    title: '¿Querés ir mucho más en profundidad?',
+    desc: 'La <strong style="color:#f0e6ff;">Consulta Evolutiva</strong> analiza cada planeta en detalle — cómo pensás, cómo amás, tu misión de vida, tus patrones más profundos y orientación concreta para tu momento actual.',
+    url: 'https://astralevolution.com/productos/consulta-evolutiva',
+    cta: 'Descubrí la Consulta Evolutiva →',
+  },
+  parejas: {
+    title: '¿Tenés pareja o alguien especial?',
+    desc: 'El <strong style="color:#f0e6ff;">Especial Parejas</strong> analiza la sinastría entre dos cartas: qué los une, qué los tensiona, qué vienen a aprender juntos y cómo potenciar el vínculo.',
+    url: 'https://astralevolution.com/productos/especial-parejas',
+    cta: 'Descubrí el Especial Parejas →',
+  },
+  laboral: {
+    title: 'Tu misión profesional, en profundidad',
+    desc: 'Tu carta tiene mucho más para decirte sobre tu vocación, tus talentos únicos y el camino profesional que mejor se alinea con quién sos. El <strong style="color:#f0e6ff;">Análisis Laboral y Misión de Vida</strong> lo revela todo.',
+    url: 'https://astralevolution.com',
+    cta: 'Conocé el Análisis Laboral →',
+  },
+};
+
+function upsellCard(card: UpsellCard): string {
+  return `
+  <div style="background:#2d1058;border-radius:10px;padding:24px 28px;text-align:center;flex:1;min-width:220px;">
+    <p style="margin:0 0 8px;font-size:13px;color:#f0e6ff;font-family:Georgia,serif;font-weight:bold;">${card.title}</p>
+    <p style="margin:0 0 16px;font-size:13px;color:#c4b5fd;line-height:1.6;font-family:Georgia,serif;">${card.desc}</p>
+    <a href="${card.url}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:12px;font-family:Georgia,serif;">${card.cta}</a>
+  </div>`;
+}
+
+function buildUpsellBlock(productName: string): string {
+  const name = productName.toLowerCase();
+  const cards: UpsellCard[] = [];
+
+  if (name.includes('esencial')) {
+    cards.push(UPSELL_CARDS.evolutiva, UPSELL_CARDS.parejas);
+  } else if (name.includes('evolutiva') || name.includes('evolutivo')) {
+    cards.push(UPSELL_CARDS.laboral, UPSELL_CARDS.parejas);
+  } else if (name.includes('pareja') || name.includes('sinastría')) {
+    cards.push(UPSELL_CARDS.evolutiva, UPSELL_CARDS.laboral);
+  } else {
+    cards.push(UPSELL_CARDS.evolutiva, UPSELL_CARDS.parejas);
+  }
+
+  return `
+  <div style="background:linear-gradient(135deg,#1e0a3c,#2d1058);border-radius:12px;padding:28px 32px;margin:8px 0;">
+    <p style="margin:0 0 6px;font-size:11px;letter-spacing:3px;color:#c9a96e;text-transform:uppercase;font-family:Georgia,serif;text-align:center;">✦ Seguí explorando tu carta</p>
+    <p style="margin:0 0 20px;font-size:13px;color:#9b7fd4;text-align:center;font-family:Georgia,serif;">Cada análisis revela una dimensión diferente de quién sos</p>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+      ${cards.map(upsellCard).join('')}
+    </div>
+  </div>`;
+}
+
 export async function sendReportEmail({
   to,
   userName,
@@ -131,6 +187,11 @@ export async function sendReportEmail({
 
       <!-- Tarjetas del reporte -->
       ${cards}
+    </div>
+
+    <!-- Upsell -->
+    <div style="padding:0 0 8px;">
+      ${buildUpsellBlock(productName)}
     </div>
 
     <!-- Footer -->
