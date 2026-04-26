@@ -137,7 +137,7 @@ export function Header() {
                     className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all inline-flex items-center gap-2"
                   >
                     <LayoutDashboard className="h-4 w-4" />
-                    Dashboard
+                    Mis Informes
                   </Link>
                   <button
                     onClick={handleLogout}

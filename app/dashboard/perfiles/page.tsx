@@ -199,7 +199,7 @@ export default function ProfilesPage() {
         <div className="mb-8">
           <Link href="/dashboard" className="inline-flex items-center text-gray-400 hover:text-white transition-colors mb-6">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Volver al Dashboard
+            Volver a Mis Informes
           </Link>
           <div className="flex items-center justify-between">
             <div>

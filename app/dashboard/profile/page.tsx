@@ -62,7 +62,7 @@ export default function ProfilePage() {
         <div className="mb-8">
           <Link href="/dashboard" className="inline-flex items-center text-gray-400 hover:text-white transition-colors mb-6">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Volver al Dashboard
+            Volver a Mis Informes
           </Link>
           <h1 className="text-4xl font-bold mb-2">Mi Perfil</h1>
           <p className="text-gray-400">Gestiona tu información personal</p>

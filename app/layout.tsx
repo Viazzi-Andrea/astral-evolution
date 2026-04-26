@@ -33,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
+    <html lang="es" className="dark">
       <body className={inter.className}>
         <div className="min-h-screen bg-black text-white relative overflow-hidden">
           <AnimatedBackground />
