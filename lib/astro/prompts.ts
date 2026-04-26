@@ -166,16 +166,15 @@ RECUERDA: el lector no sabe astrología. Cada término técnico debe explicarse 
 
 ## I. Quién Sos Realmente
 
-Tres párrafos que describen la identidad profunda de ${name} — no el signo solar genérico, sino cómo esa energía específica (signo + casa) se vive en la vida real:
+Escribí tres párrafos corridos, SIN etiquetas ni títulos intermedios (no escribas "Párrafo 1", "Tu esencia", ni ningún subtítulo dentro de esta sección).
 
-**Párrafo 1 — Tu esencia (Sol en ${chart.chartSummary.sunSign}, Casa ${chart.planets.find(p => p.name === 'Sol')?.house}):**
-¿Qué es lo que ${name} genuinamente necesita para sentir que su vida tiene sentido? ¿Cuándo se siente más vivo/a? ¿Qué pasa cuando no puede expresar eso? Describí la tensión entre la esencia y el mundo, y el camino hacia la autenticidad. La Casa ${chart.planets.find(p => p.name === 'Sol')?.house} dice en qué ARENA de la vida se juega esto.
+El primer párrafo habla del Sol en ${chart.chartSummary.sunSign} (Casa ${chart.planets.find(p => p.name === 'Sol')?.house}): qué necesita genuinamente ${name} para sentir que su vida tiene sentido, cuándo se siente con más energía y propósito, qué pasa cuando no puede expresar eso, y en qué área de la vida (la que representa la Casa ${chart.planets.find(p => p.name === 'Sol')?.house}) se juega principalmente esta búsqueda.
 
-**Párrafo 2 — Tu mundo emocional (Luna en ${chart.chartSummary.moonSign}, Casa ${chart.planets.find(p => p.name === 'Luna')?.house}):**
-¿Qué necesita ${name} para sentirse seguro/a emocionalmente? ¿Cuáles son sus reacciones automáticas bajo presión? ¿Qué heridas de la infancia (sin dramatizar) dejaron una huella en cómo procesa las emociones hoy? ¿Cómo afecta esto a sus relaciones más cercanas?
+El segundo párrafo habla de la Luna en ${chart.chartSummary.moonSign} (Casa ${chart.planets.find(p => p.name === 'Luna')?.house}): qué necesita ${name} para sentirse emocionalmente segura, cuáles son sus reacciones automáticas bajo presión, qué heridas o aprendizajes de la infancia dejaron huella en cómo procesa las emociones hoy, y cómo esto afecta sus vínculos más cercanos.
 
-**Párrafo 3 — Cómo te percibe el mundo (Ascendente en ${chart.chartSummary.ascendantSign}):**
-¿Qué primera impresión genera ${name} en los demás, aunque por dentro sea diferente? ¿Cuál es la brecha entre cómo la ven y quién realmente es? ¿Cómo puede usar conscientemente esa energía exterior como herramienta?
+El tercer párrafo habla del Ascendente en ${chart.chartSummary.ascendantSign}: qué primera impresión genera ${name} en los demás aunque por dentro sea diferente, cuál es la brecha entre cómo la ven y quién realmente es, y cómo puede usar conscientemente esa energía exterior como herramienta en su favor.
+
+RECORDATORIO: usá lenguaje completamente neutro en género. Nunca "seguro/a", "vivo/a", "dispuesto/a". Reformulá con construcciones neutras: "la seguridad que buscás", "cuando la energía fluye", "cuando estás lista para".
 
 ## II. Tu Patrón Central: Lo que se Repite en tu Vida
 
@@ -245,77 +244,95 @@ ${astroData}
 ${contextNote}
 
 TAREA: Genera una "Consulta Evolutiva Completa" para ${name}.
-Extensión total: 1800–2200 palabras. Escribe con profundidad real; no resumas.
-DISTRIBUCIÓN DE ESPACIO: Secciones I–VII: máximo 250 palabras cada una. Sección IX (CONCLUSIÓN): mínimo 200 palabras, siempre completa. Si el espacio se agota, resumí las secciones IV–VII para garantizar que la Conclusión se genere íntegra.
+Extensión total: 1800–2200 palabras. Escribí con profundidad real; no resumas.
+RECUERDA: el lector no sabe astrología. Cada término técnico debe explicarse en lenguaje cotidiano en la misma frase.
+GÉNERO NEUTRO OBLIGATORIO: nunca uses terminaciones /a ni /o. Reformulá con construcciones neutras.
+DISTRIBUCIÓN: Secciones I–VII: máximo 280 palabras cada una. Sección IX: mínimo 200 palabras, siempre completa.
 
 ---
 
 # ✦ CONSULTA EVOLUTIVA — ${name.toUpperCase()}
 
-## I. TRINIDAD ESENCIAL: Sol · Luna · Ascendente
-(Igual que la Lectura Esencial, pero con mayor profundidad psicológica.
-Integra el mito del signo según la visión de Liz Greene.)
+## I. Quién Sos en el Fondo
 
-## II. LOS PLANETAS PERSONALES EN DETALLE
-Para Mercurio, Venus y Marte: un párrafo por planeta.
-- Cómo se comunican, aman y actúan (respectivamente).
-- La casa donde está cada uno define EL CAMPO donde esa energía se despliega.
-- Incluye si hay retrogradación y su significado psicológico.
+Tres párrafos corridos, SIN subtítulos ni etiquetas intermedias dentro de esta sección.
 
-Posiciones:
-· ${formatPlanet(chart.planets.find(p => p.name === 'Mercurio')!)}
-· ${formatPlanet(chart.planets.find(p => p.name === 'Venus')!)}
-· ${formatPlanet(chart.planets.find(p => p.name === 'Marte')!)}
+El primero profundiza en el Sol en ${chart.chartSummary.sunSign} (Casa ${chart.planets.find(p => p.name === 'Sol')?.house}): cuál es la esencia más auténtica de ${name}, qué necesita para sentir que su vida tiene sentido, y en qué área de vida (representada por la Casa ${chart.planets.find(p => p.name === 'Sol')?.house}) se despliega ese propósito.
 
-## III. LOS PLANETAS SOCIALES: Júpiter y Saturno
-- JÚPITER (${chart.planets.find(p => p.name === 'Júpiter')?.degreeStr}, Casa ${chart.planets.find(p => p.name === 'Júpiter')?.house}): 
-  El principio de expansión y significado. ¿Dónde busca ${name} su crecimiento natural?
-- SATURNO (${chart.planets.find(p => p.name === 'Saturno')?.degreeStr}, Casa ${chart.planets.find(p => p.name === 'Saturno')?.house}${chart.planets.find(p => p.name === 'Saturno')?.retrograde ? ' ℞' : ''}): 
-  El gran maestro. Las lecciones de karma y estructura. El regalo oculto en la restricción.
-  (Usa la visión de Arroyo: Saturno como el lugar donde te conviertes en adulto.)
+El segundo profundiza en la Luna en ${chart.chartSummary.moonSign} (Casa ${chart.planets.find(p => p.name === 'Luna')?.house}): el mundo emocional, los patrones aprendidos en la infancia, cómo reacciona ${name} bajo presión, qué necesita para sentirse emocionalmente en su lugar.
 
-## IV. LOS PLANETAS TRANSPERSONALES
-Urano, Neptuno y Plutón por generación y casa:
-- Qué generacional los une con millones y qué los hace únicos por la casa específica.
-· ${formatPlanet(chart.planets.find(p => p.name === 'Urano')!)}
-· ${formatPlanet(chart.planets.find(p => p.name === 'Neptuno')!)}
-· ${formatPlanet(chart.planets.find(p => p.name === 'Plutón')!)}
+El tercero trata el Ascendente en ${chart.chartSummary.ascendantSign}: la imagen que proyecta al mundo, la brecha entre esa imagen y su interior, y cómo puede usar esa energía exterior conscientemente.
 
-## V. EL NODO NORTE: LA DIRECCIÓN EVOLUTIVA
-Nodo Norte en ${chart.northNode.degreeStr} — Casa ${chart.northNode.house}.
-Este es el punto más importante para la evolución del alma según la astrología karmica.
-¿Hacia dónde está "invitada" el alma de ${name} en esta vida?
-¿Qué patrones del Nodo Sur (${toOpposite(chart.northNode.sign)}) debe integrar sin apegarse?
+## II. Tu Forma de Pensar, Amar y Actuar
 
-## VI. LAS CONFIGURACIONES DE ASPECTO PRINCIPALES
-Analiza los 3–5 aspectos más importantes de la carta por su significado evolutivo.
-Para cada uno: descripción psicológica profunda + cómo se manifiesta en la vida + integración.
+Tres párrafos, uno por planeta, SIN etiquetas intermedias. Explicá cada uno en términos de vida real:
 
-Aspectos en orden de importancia (orbe más cerrado primero):
-${chart.aspects.slice(0, 8).map(formatAspect).join('\n')}
+**Cómo pensás y te comunicás** — Mercurio en ${chart.planets.find(p => p.name === 'Mercurio')?.degreeStr}, Casa ${chart.planets.find(p => p.name === 'Mercurio')?.house}${chart.planets.find(p => p.name === 'Mercurio')?.retrograde ? ' (retrógrado al nacer — lo que esto significa en la práctica)' : ''}: cómo procesa la información ${name}, cómo aprende mejor, cómo se expresa, qué tipo de conversaciones la nutren.
 
-## VII. LAS CASAS ANGULARES Y EL EJE DE VIDA
-Analiza las casas angulares (1-4-7-10) como el eje que define la identidad,
-las raíces, las relaciones y la vocación de ${name}.
+**Cómo amás** — Venus en ${chart.planets.find(p => p.name === 'Venus')?.degreeStr}, Casa ${chart.planets.find(p => p.name === 'Venus')?.house}: qué necesita ${name} para sentirse amada, cómo expresa el afecto, qué valora en una relación, qué le cuesta dar o recibir.
+
+**Cómo actuás y usás tu energía** — Marte en ${chart.planets.find(p => p.name === 'Marte')?.degreeStr}, Casa ${chart.planets.find(p => p.name === 'Marte')?.house}${chart.planets.find(p => p.name === 'Marte')?.retrograde ? ' (retrógrado)' : ''}: cómo toma decisiones ${name}, cómo enfrenta los conflictos, qué la impulsa a la acción, dónde gasta más energía.
+
+## III. Dónde Crecés y Dónde Aprendés
+
+Dos párrafos:
+
+**Dónde crecés naturalmente** — Júpiter en ${chart.planets.find(p => p.name === 'Júpiter')?.degreeStr}, Casa ${chart.planets.find(p => p.name === 'Júpiter')?.house}: en qué áreas de vida fluye la expansión y la suerte para ${name}, qué le da sentido de abundancia, cómo puede potenciar esa energía sin excederse.
+
+**Dónde madurás con esfuerzo** — Saturno en ${chart.planets.find(p => p.name === 'Saturno')?.degreeStr}, Casa ${chart.planets.find(p => p.name === 'Saturno')?.house}${chart.planets.find(p => p.name === 'Saturno')?.retrograde ? ' (retrógrado)' : ''}: qué áreas exigen disciplina y compromiso, qué miedos o bloqueos aparecen ahí, y cuál es el regalo profundo que viene de trabajar esa zona con paciencia.
+
+## IV. Las Fuerzas Generacionales que te Moldean
+
+Un párrafo por planeta transpersonal. Para cada uno: qué comparte ${name} con toda su generación Y qué la hace única por la casa donde cae en su carta específica. Explicar en términos de experiencias y actitudes, no de conceptos astrológicos.
+
+Urano (${chart.planets.find(p => p.name === 'Urano')?.degreeStr}, Casa ${chart.planets.find(p => p.name === 'Urano')?.house}): dónde busca ${name} ruptura, originalidad, libertad.
+Neptuno (${chart.planets.find(p => p.name === 'Neptuno')?.degreeStr}, Casa ${chart.planets.find(p => p.name === 'Neptuno')?.house}): dónde vive su espiritualidad, sus ideales, y también sus ilusiones.
+Plutón (${chart.planets.find(p => p.name === 'Plutón')?.degreeStr}, Casa ${chart.planets.find(p => p.name === 'Plutón')?.house}): dónde ocurren las transformaciones más profundas e irreversibles de su vida.
+
+## V. Tu Dirección de Vida
+
+El Nodo Norte en ${chart.northNode.degreeStr} (Casa ${chart.northNode.house}) es el punto que muestra hacia dónde está llamada a crecer el alma de ${name} en esta vida — NO explicar como término técnico "nodo norte", sino como "la dirección que tu carta propone para tu crecimiento".
+
+Dos párrafos: hacia dónde la invita la carta, y qué patrón conocido (el del signo opuesto, ${toOpposite(chart.northNode.sign)}) conviene integrar sin quedarse atrapada en él.
+
+## VI. Los Patrones que se Repiten en tu Vida
+
+Analizá los 3–4 aspectos más importantes sin usar sus nombres técnicos solos. Para cada uno describí: qué tensión o sinfonía interna crea, cómo se manifiesta en situaciones cotidianas concretas, y cuál es el camino de integración.
+
+Aspectos principales: ${chart.aspects.slice(0, 6).map(formatAspect).join(' | ')}
+
+## VII. Tu Identidad, Raíces, Relaciones y Vocación
+
+Analizá el eje de las cuatro casas más importantes (1, 4, 7 y 10) como los cuatro pilares de la vida de ${name}:
+- Casa 1: cómo se presenta al mundo
+- Casa 4: sus raíces, hogar y sentido de pertenencia
+- Casa 7: qué busca y proyecta en sus relaciones
+- Casa 10: su vocación y lugar en el mundo
 ${chart.chartSummary.angularPlanets.length > 0
-  ? `Planetas en ángulos: ${chart.chartSummary.angularPlanets.join(', ')}`
-  : 'Sin planetas angulares — el énfasis está en las casas sucedentes o cadentes.'}
+  ? `Planetas en estas casas: ${chart.chartSummary.angularPlanets.join(', ')} — describí su influencia concreta.`
+  : 'No hay planetas en estas casas — describí las cúspides y lo que revelan sobre cada área.'}
 
-## VIII. EL PROYECTO DE VIDA
-En exactamente DOS párrafos cortos:
-· Párrafo 1: ¿cuál es el "proyecto de vida" que esta carta propone para ${name}? No como destino fijo, sino como campo de posibilidades conscientes. Una visión de conjunto que solo emerge al ver toda la carta como un sistema.
-· Párrafo 2: el principal obstáculo interno (sombra, nodo sur, aspecto difícil) y la clave de integración más poderosa de toda la carta.
-NO resumás ni repitas análisis ya desarrollados — solo escribe lo que aún no dijiste.
+## VIII. Tu Proyecto de Vida
 
-## IX. CONCLUSIÓN EVOLUTIVA PERSONALIZADA
-IMPORTANTE: Esta sección NO resume lo anterior — es orientación práctica nueva. No reescribas secciones previas.
+Dos párrafos corridos, SIN subtítulos:
+
+El primero describe el proyecto de vida que propone esta carta — no como destino fijo sino como campo de posibilidades: qué viene a construir, experimentar o sanar ${name} en esta vida, visto desde el conjunto de toda la carta.
+
+El segundo nombra el principal obstáculo interno (el patrón más difícil de la carta) y la clave de integración más poderosa — lo que, si ${name} trabaja conscientemente, puede transformar ese obstáculo en su mayor fortaleza.
+NO repetir análisis ya desarrollados en secciones anteriores.
+
+## IX. Tu Brújula: Orientación Concreta para Este Momento
+
+IMPORTANTE: Esta sección NO resume lo anterior — es orientación práctica nueva.
 
 ${personalContext
-  ? `Usando el siguiente contexto personal de ${name}: "${personalContext}"
+  ? `${name} compartió este contexto sobre su momento actual: "${personalContext}"
 
-Redactá 2 o 3 párrafos de guía concreta y accionable que conecten los patrones de la carta con esta situación real. Honesto, sin vacíos, orientado al movimiento. Esta sección debe completarse íntegramente.`
-  : `Redactá 2 párrafos de orientación práctica para ${name}: qué actitud o acción concreta le pide esta carta en este momento. Directo y útil.`
+Redactá 2–3 párrafos de guía concreta que conecten los patrones de su carta con esta situación real. Qué le pide este momento según lo que muestra su carta, qué patrón conviene observar o soltar, y cuál es el primer paso concreto y posible que puede dar. Honesto, sin vacíos, orientado a la acción.`
+  : `Redactá 2–3 párrafos de orientación práctica para ${name}: qué le pide esta carta en este momento de su vida, qué patrón conviene observar o transformar, y cuál es una acción concreta y posible que puede tomar para avanzar. Que sea directo y útil.`
 }
+
+Cerrá con una sola oración que recuerde que la carta natal muestra tendencias y potenciales — no un destino escrito. ${name} tiene libre albedrío para elegir cómo responder a estas energías. La carta es una brújula, no una sentencia.
 
 ---`.trim();
 
