@@ -53,7 +53,7 @@ async function callGemini(prompt: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY?.replace(/[\r\n\s]/g, '');
   if (!apiKey) throw new Error('GEMINI_API_KEY no configurada');
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -126,9 +126,28 @@ export async function GET(request: NextRequest) {
 
   console.log(`[Birthday Cron] Encontrados ${todayBirthdays.length} cumpleaños hoy`);
 
-  const results = { sent: 0, failed: 0, errors: [] as string[] };
+  // Solo enviar a usuarios con al menos una transacción completada (clientes reales)
+  const { data: paidTransactions, error: txError } = await supabase
+    .from('transactions')
+    .select('user_id')
+    .eq('status', 'completed');
 
-  for (const bd of todayBirthdays) {
+  if (txError) {
+    console.error('[Birthday Cron] Error consultando transacciones:', txError);
+    return NextResponse.json({ error: txError.message }, { status: 500 });
+  }
+
+  const paidUserIds = new Set((paidTransactions ?? []).map((t: any) => t.user_id));
+
+  const eligibleBirthdays = todayBirthdays.filter((bd: any) => paidUserIds.has(bd.user_id));
+
+  console.log(
+    `[Birthday Cron] Elegibles (clientes que pagaron): ${eligibleBirthdays.length} / ${todayBirthdays.length}`
+  );
+
+  const results = { sent: 0, failed: 0, skipped: todayBirthdays.length - eligibleBirthdays.length, errors: [] as string[] };
+
+  for (const bd of eligibleBirthdays) {
     const user = (bd as any).users;
     if (!user?.email) continue;
 
@@ -170,6 +189,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     date: todayMMDD,
     found: todayBirthdays.length,
+    eligible: eligibleBirthdays.length,
     ...results,
   });
 }
