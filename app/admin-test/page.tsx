@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader as Loader2, RefreshCw, CircleCheck as CheckCircle2, Clock, Circle as XCircle, Send, LogIn, Wifi, WifiOff } from 'lucide-react';
+import { Loader as Loader2, RefreshCw, CircleCheck as CheckCircle2, Clock, Circle as XCircle, Send, LogIn, Wifi, WifiOff, Trash2 } from 'lucide-react';
 
 interface Report {
   id:             string;
@@ -38,6 +38,7 @@ export default function AdminTestPage() {
   const [actionResult, setActionResult]   = useState<string | null>(null);
   const [health, setHealth]               = useState<any>(null);
   const [healthLoading, setHealthLoading] = useState(false);
+  const [deletingId, setDeletingId]       = useState<string | null>(null);
 
   const fetchHealth = useCallback(async (secret: string) => {
     setHealthLoading(true);
@@ -122,6 +123,32 @@ export default function AdminTestPage() {
       setActionResult(`❌ Error de red: ${err}`);
     } finally {
       setActionId(null);
+    }
+  };
+
+  const handleDelete = async (report: Report) => {
+    if (!window.confirm(`¿Eliminar este reporte de prueba?\n\n${report.birth_name ?? report.user_name} — ${report.product_name}\n\nEsto borra el reporte y la transacción de la base de datos.`)) return;
+
+    setDeletingId(report.id);
+    setActionResult(null);
+    try {
+      const res = await fetch('/api/admin/delete-report', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': adminSecret },
+        body: JSON.stringify({ reportId: report.id, transactionId: report.transaction_id }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setActionResult('🗑️ Reporte eliminado');
+        setSelectedReport(null);
+        await fetchReports(adminSecret, filter);
+      } else {
+        setActionResult(`❌ Error eliminando: ${data.error}`);
+      }
+    } catch (err) {
+      setActionResult(`❌ Error de red: ${err}`);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -241,7 +268,7 @@ export default function AdminTestPage() {
               </span>
             </div>
           ) : (
-            <span className="text-xs text-gray-600">{healthLoading ? 'Verificando...' : 'No disponible'}</span>
+            <span className="text-xs text-gray-400">{healthLoading ? 'Verificando...' : 'Sin datos — hacé clic en Actualizar'}</span>
           )}
         </div>
 
@@ -370,7 +397,7 @@ export default function AdminTestPage() {
                   )}
 
                   {/* Acciones según estado */}
-                  {(selectedReport.status === 'failed' || selectedReport.status === 'generating') && (
+                  {(selectedReport.status === 'pending' || selectedReport.status === 'failed' || selectedReport.status === 'generating') && (
                     <Button
                       onClick={() => handleAction(selectedReport)}
                       disabled={actionId === selectedReport.id}
@@ -378,7 +405,7 @@ export default function AdminTestPage() {
                     >
                       {actionId === selectedReport.id
                         ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generando... (1-3 min)</>
-                        : <><RefreshCw className="w-4 h-4 mr-2" />Regenerar y reenviar email</>
+                        : <><RefreshCw className="w-4 h-4 mr-2" />Generar y enviar email</>
                       }
                     </Button>
                   )}
@@ -395,6 +422,18 @@ export default function AdminTestPage() {
                       }
                     </Button>
                   )}
+
+                  <Button
+                    onClick={() => handleDelete(selectedReport)}
+                    disabled={deletingId === selectedReport.id}
+                    variant="outline"
+                    className="w-full border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                  >
+                    {deletingId === selectedReport.id
+                      ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando...</>
+                      : <><Trash2 className="w-4 h-4 mr-2" />Eliminar reporte de prueba</>
+                    }
+                  </Button>
                 </div>
               ) : (
                 <div className="flex items-center justify-center py-12 text-gray-400">
