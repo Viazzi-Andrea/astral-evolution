@@ -432,11 +432,10 @@ export async function POST(request: NextRequest) {
 
 // ─── Convierte markdown básico a HTML ────────────────────────────────────────
 function markdownToHTML(text: string): string {
-  // Normalizar saltos de línea (Windows \r\n → \n)
   let t = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-  // Encabezados (antes de cualquier otra cosa)
-  t = t.replace(/^#{3} (.+)$/gm, '<h3>$1</h3>');
+  // Encabezados — ## crea tarjeta nueva, ### se convierte a negrita para uniformidad visual
+  t = t.replace(/^#{3} (.+)$/gm, '**$1**');
   t = t.replace(/^#{2} (.+)$/gm, '<h2>$1</h2>');
   t = t.replace(/^#{1} (.+)$/gm, '<h1>$1</h1>');
 
@@ -444,8 +443,13 @@ function markdownToHTML(text: string): string {
   t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   t = t.replace(/\*(.+?)\*/g,     '<em>$1</em>');
 
-  // Listas: acumular <li> consecutivos y envolver en <ul>
+  // Listas con viñeta (·•-*)
   t = t.replace(/^[·•\-\*] (.+)$/gm, '<li>$1</li>');
+
+  // Listas numeradas (1. 2. 3.)
+  t = t.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+
+  // Envolver bloques de <li> consecutivos en <ul>
   t = t.replace(/(<li>[^\n]+<\/li>\n?)+/g, match => `<ul>${match}</ul>`);
 
   // Separadores

@@ -139,12 +139,16 @@ PRINCIPIOS INQUEBRANTABLES:
 
 8. FORMATO DE SALIDA — OBLIGATORIO
    · Usa EXCLUSIVAMENTE Markdown.
-   · Usa ## para títulos de sección, ### para subtítulos.
+   · Usa ## para títulos de sección. PROHIBIDO usar ### — en su lugar usá **negrita** para destacar subtemas dentro de una sección.
    · Usa **texto** para resaltar conceptos clave.
    · Separá párrafos con línea en blanco.
-   · No uses listas de puntos salvo que sean estrictamente necesarias.
+   · No uses listas de puntos salvo que sean estrictamente necesarias. Cuando las uses, usá guión (-) o números (1. 2. 3.).
    · No añadas texto antes del primer ##. Empezá directamente con la primera sección.
-   · PRIORITARIO: completá TODAS las secciones. Si el espacio se agota, resumí secciones intermedias pero nunca dejes la Conclusión incompleta.`;
+   · PRIORITARIO: completá TODAS las secciones. Si el espacio se agota, resumí secciones intermedias pero nunca dejes la Conclusión incompleta.
+
+9. IDIOMA — REGLA ABSOLUTA
+   · Escribí TODO en español rioplatense. PROHIBIDO usar palabras, frases o cláusulas en inglés, aunque sean términos técnicos astrológicos. Si necesitás un término en otro idioma, traducilo o explicalo en español.
+   · Verificá cada oración antes de continuar. Una sola frase en inglés invalida la calidad del informe.`;
 
 // ─── PLANTILLA: LECTURA ESENCIAL ─────────────────────────────────────────────
 
