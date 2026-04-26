@@ -17,7 +17,7 @@ const R_P2 = 132;         // planetas carta 2 (sinastría)
 const R_IN = 88;          // círculo central
 
 // ─── Datos simbólicos ─────────────────────────────────────────────────────────
-const SIGN_GLYPHS = ['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
+const SIGN_GLYPHS = ['Ari','Tau','Gem','Can','Leo','Vir','Lib','Sco','Sag','Cap','Acu','Pis'];
 
 // Colores por elemento (Fuego, Tierra, Aire, Agua — orden zodiacal)
 const SEG_COLORS = [
@@ -27,9 +27,9 @@ const SEG_COLORS = [
 ];
 
 const PLANET_GLYPHS: Record<string, string> = {
-  'Sol':'☉','Luna':'☽','Mercurio':'☿','Venus':'♀','Marte':'♂',
-  'Júpiter':'♃','Saturno':'♄','Urano':'⛢','Neptuno':'♆','Plutón':'♇',
-  'Nodo Norte':'☊',
+  'Sol':'Sol','Luna':'Lun','Mercurio':'Mer','Venus':'Ven','Marte':'Mar',
+  'Júpiter':'Jup','Saturno':'Sat','Urano':'Ura','Neptuno':'Nep','Plutón':'Plu',
+  'Nodo Norte':'NN',
 };
 
 // ─── Geometría ────────────────────────────────────────────────────────────────
@@ -83,8 +83,8 @@ function renderPlanets(
 
     // Círculo + glifo del planeta
     const [px, py] = pt(r, lon);
-    out.push(`<circle cx="${f(px)}" cy="${f(py)}" r="12" fill="#1e1245" stroke="${glyphColor}" stroke-width="1.5" opacity="1"/>`);
-    out.push(`<text x="${f(px)}" y="${f(py)}" text-anchor="middle" dominant-baseline="central" font-size="13" fill="${glyphColor}" font-family="serif" font-weight="bold">${glyph}</text>`);
+    out.push(`<circle cx="${f(px)}" cy="${f(py)}" r="14" fill="#1e1245" stroke="${glyphColor}" stroke-width="1.5" opacity="1"/>`);
+    out.push(`<text x="${f(px)}" y="${f(py)}" text-anchor="middle" dominant-baseline="central" font-size="9" fill="${glyphColor}" font-family="Arial,sans-serif" font-weight="bold">${glyph}</text>`);
 
     if (p.retrograde) {
       out.push(`<text x="${f(px + 9)}" y="${f(py - 9)}" font-size="7" fill="#e74c3c" font-family="sans-serif">℞</text>`);
@@ -111,7 +111,7 @@ function buildWheel(
     const l1 = i * 30, l2 = (i + 1) * 30;
     const [gx, gy] = pt((R_ZO + R_ZI) / 2, l1 + 15);
     parts.push(`<path d="${segPath(l1, l2, R_ZO, R_ZI)}" fill="${SEG_COLORS[i]}" stroke="#c9a96e" stroke-width="0.4" opacity="0.75"/>`);
-    parts.push(`<text x="${f(gx)}" y="${f(gy)}" text-anchor="middle" dominant-baseline="central" font-size="15" fill="#c9a96e" font-family="serif">${SIGN_GLYPHS[i]}</text>`);
+    parts.push(`<text x="${f(gx)}" y="${f(gy)}" text-anchor="middle" dominant-baseline="central" font-size="9" fill="#c9a96e" font-family="Arial,sans-serif" font-weight="bold">${SIGN_GLYPHS[i]}</text>`);
   }
 
   // Divisiones de 30° en el zodíaco

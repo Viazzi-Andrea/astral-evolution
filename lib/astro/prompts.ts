@@ -116,6 +116,7 @@ PRINCIPIOS INQUEBRANTABLES:
 
 5. TONO DIRECTO Y CÁLIDO
    · Escribí en segunda persona ("tu energía busca...", "lo que sentís es...").
+   · Usá SIEMPRE lenguaje de género neutro: nunca uses "atrapado/a", "seguro/a", "él/ella". En su lugar usá construcciones como "te sentís en libertad", "la seguridad que buscás", o reformulá la frase para evitar el genérico.
    · Sé directo: evitá "puede que", "quizás", "podría indicar" — usá afirmaciones claras.
    · Cálido, profundo, sin condescendencia ni frases vacías genéricas.
    · Cada párrafo debe aplicarse SOLO a esta carta, no a cualquier persona con ese signo solar.
@@ -218,6 +219,8 @@ Que sea honesto, útil y esperanzador — sin ser vago ni poético sin sustancia
 · ¿Qué acción concreta —no metafórica— puede tomar para avanzar en su camino?
 Cerrá de forma que ${name} sienta que tiene una dirección clara, no solo reflexiones.`
 }
+
+IMPORTANTE — LIBRE ALBEDRÍO: Al final de esta sección, agregá un párrafo breve (2-3 oraciones) que recuerde que la carta natal muestra tendencias y potenciales, pero que cada persona tiene libre albedrío para elegir cómo responder a estas energías. El destino no está escrito — la carta es una brújula, no una sentencia.
 
 ---`.trim();
 
