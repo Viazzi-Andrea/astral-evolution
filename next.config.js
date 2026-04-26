@@ -3,6 +3,10 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Paquetes con binarios nativos (.node) — no bundlear con webpack, usar require() de Node
+  experimental: {
+    serverComponentsExternalPackages: ['@resvg/resvg-js'],
+  },
   // Expone ADMIN_SECRET al bundle del Edge Middleware en build time (no llega al cliente porque ningún componente client lo usa)
   env: {
     ADMIN_SECRET: process.env.ADMIN_SECRET,
