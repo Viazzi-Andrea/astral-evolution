@@ -4,110 +4,109 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader as Loader2, RefreshCw, CircleCheck as CheckCircle2, Clock, Circle as XCircle, Send } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { Loader as Loader2, RefreshCw, CircleCheck as CheckCircle2, Clock, Circle as XCircle, Send, LogIn } from 'lucide-react';
 
 interface Report {
-  id: string;
+  id:             string;
   transaction_id: string;
-  status: string;
-  created_at: string;
-  generated_at: string | null;
-  sent_at: string | null;
-  error_message: string | null;
-  transaction: {
-    id: string;
-    product: { name_es: string; slug: string } | null;
-    birth_data: { name: string; birth_date: string; birth_time: string } | null;
-  } | null;
+  status:         string;
+  created_at:     string;
+  generated_at:   string | null;
+  sent_at:        string | null;
+  error_message:  string | null;
+  user_email:     string | null;
+  user_name:      string | null;
+  product_name:   string | null;
+  product_slug:   string | null;
+  birth_name:     string | null;
+  birth_date:     string | null;
+  birth_time:     string | null;
+  amount:         number | null;
+  currency:       string | null;
 }
 
 type StatusFilter = 'all' | 'failed' | 'completed' | 'pending' | 'generating';
 
 export default function AdminTestPage() {
-  const [reports, setReports] = useState<Report[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [reports, setReports]             = useState<Report[]>([]);
+  const [loading, setLoading]             = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
-  const [filter, setFilter] = useState<StatusFilter>('all');
-  const [retrying, setRetrying] = useState<string | null>(null);
-  const [adminSecret, setAdminSecret] = useState('');
-  const [retryResult, setRetryResult] = useState<string | null>(null);
+  const [filter, setFilter]               = useState<StatusFilter>('all');
+  const [actionId, setActionId]           = useState<string | null>(null);
+  const [adminSecret, setAdminSecret]     = useState('');
+  const [secretInput, setSecretInput]     = useState('');
+  const [actionResult, setActionResult]   = useState<string | null>(null);
 
-  const fetchReports = useCallback(async () => {
+  const fetchReports = useCallback(async (secret: string, statusFilter: StatusFilter) => {
     setLoading(true);
+    setActionResult(null);
     try {
-      const supabase = createClient();
-      let query = supabase
-        .from('reports')
-        .select(`
-          id,
-          transaction_id,
-          status,
-          created_at,
-          generated_at,
-          sent_at,
-          error_message,
-          transaction:transactions(
-            id,
-            product:products(name_es, slug),
-            birth_data:birth_data(name, birth_date, birth_time)
-          )
-        `)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (filter !== 'all') {
-        query = query.eq('status', filter);
+      const params = statusFilter !== 'all' ? `?status=${statusFilter}` : '';
+      const res = await fetch(`/api/admin/reports${params}`, {
+        headers: { 'x-admin-secret': secret },
+      });
+      if (res.status === 401) {
+        setAdminSecret('');
+        setActionResult('❌ Clave incorrecta');
+        setReports([]);
+        return;
       }
-
-      const { data, error } = await query;
-      if (error) {
-        console.error('Error fetching reports:', error);
-      } else {
-        setReports(data as unknown as Report[]);
+      if (!res.ok) {
+        setActionResult(`❌ Error del servidor: ${res.status}`);
+        return;
       }
-    } catch (error) {
-      console.error('Error:', error);
+      const data: Report[] = await res.json();
+      setReports(data);
+    } catch (err) {
+      setActionResult(`❌ Error de red: ${err}`);
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, []);
 
+  // Auto-refresh cuando hay secret activo
   useEffect(() => {
-    fetchReports();
-    const interval = setInterval(fetchReports, 30000); // Auto-refresh cada 30s
+    if (!adminSecret) return;
+    fetchReports(adminSecret, filter);
+    const interval = setInterval(() => fetchReports(adminSecret, filter), 30000);
     return () => clearInterval(interval);
-  }, [fetchReports]);
+  }, [adminSecret, filter, fetchReports]);
 
-  const handleRetry = async (report: Report) => {
-    const txId = report.transaction_id || report.transaction?.id;
-    if (!txId) return;
-    if (!adminSecret) {
-      setRetryResult('⚠️ Ingresá el ADMIN_SECRET primero');
-      return;
-    }
-    setRetrying(report.id);
-    setRetryResult(null);
+  const handleLogin = () => {
+    if (!secretInput.trim()) return;
+    setAdminSecret(secretInput.trim());
+  };
+
+  const handleAction = async (report: Report) => {
+    const txId = report.transaction_id;
+    if (!txId || !adminSecret) return;
+
+    setActionId(report.id);
+    setActionResult(null);
+
+    const isResend = report.status === 'completed';
+    const endpoint = isResend ? '/api/admin/resend-email' : '/api/admin/retry-report';
+
     try {
-      const res = await fetch('/api/admin/retry-report', {
+      const res = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-secret': adminSecret,
-        },
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': adminSecret },
         body: JSON.stringify({ transactionId: txId }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setRetryResult('✅ Reporte regenerado correctamente');
+        const msg = isResend
+          ? `✅ Email reenviado a ${data.sentTo ?? report.user_email}`
+          : '✅ Reporte regenerado y email enviado';
+        setActionResult(msg);
       } else {
-        setRetryResult(`❌ Error: ${data.error || JSON.stringify(data)}`);
+        setActionResult(`❌ Error: ${data.error ?? JSON.stringify(data)}`);
       }
-      await fetchReports();
+      await fetchReports(adminSecret, filter);
     } catch (err) {
-      setRetryResult(`❌ Error de red: ${err}`);
+      setActionResult(`❌ Error de red: ${err}`);
     } finally {
-      setRetrying(null);
+      setActionId(null);
     }
   };
 
@@ -125,31 +124,82 @@ export default function AdminTestPage() {
   };
 
   const failedCount = reports.filter(r => r.status === 'failed').length;
+  const unsentCount = reports.filter(r => r.status === 'completed' && !r.sent_at).length;
 
+  // ─── Pantalla de login si no hay secret ──────────────────────────────────────
+  if (!adminSecret) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center px-4">
+        <Card className="bg-white/10 backdrop-blur-md border-white/20 w-full max-w-sm">
+          <CardHeader>
+            <CardTitle className="text-white text-center">Panel de Admin</CardTitle>
+            <CardDescription className="text-gray-300 text-center">Astral Evolution · Reportes</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <input
+                type="password"
+                placeholder="ADMIN_SECRET"
+                value={secretInput}
+                onChange={e => setSecretInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-purple-400"
+                autoFocus
+              />
+              <Button onClick={handleLogin} className="w-full bg-purple-600 hover:bg-purple-700">
+                <LogIn className="w-4 h-4 mr-2" />Entrar
+              </Button>
+              {actionResult && (
+                <p className="text-red-400 text-sm text-center">{actionResult}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // ─── Panel principal ──────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900 py-12 px-4">
       <div className="max-w-7xl mx-auto">
+
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-white mb-1">Panel de Admin — Reportes</h1>
-            <p className="text-gray-400 text-sm">Auto-refresh cada 30s · Mostrando últimos 50</p>
+            <p className="text-gray-400 text-sm">Auto-refresh 30s · Últimos 100 reportes</p>
           </div>
-          <Button onClick={fetchReports} disabled={loading} className="bg-white/10 hover:bg-white/20">
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Actualizar
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => fetchReports(adminSecret, filter)} disabled={loading} className="bg-white/10 hover:bg-white/20">
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Actualizar
+            </Button>
+            <Button onClick={() => { setAdminSecret(''); setSecretInput(''); }} className="bg-white/5 hover:bg-white/10 text-gray-400">
+              Salir
+            </Button>
+          </div>
         </div>
 
-        {/* Filtros de estado */}
+        {/* Alertas */}
+        {failedCount > 0 && (
+          <div className="mb-4 p-3 bg-red-500/20 border border-red-500/40 rounded-lg text-sm text-red-300">
+            ⚠️ {failedCount} reporte{failedCount > 1 ? 's' : ''} fallido{failedCount > 1 ? 's' : ''} — requiere{failedCount > 1 ? 'n' : ''} atención
+          </div>
+        )}
+        {unsentCount > 0 && (
+          <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500/40 rounded-lg text-sm text-yellow-300">
+            📧 {unsentCount} reporte{unsentCount > 1 ? 's' : ''} completado{unsentCount > 1 ? 's' : ''} sin email enviado
+          </div>
+        )}
+
+        {/* Filtros */}
         <div className="flex gap-2 mb-4 flex-wrap">
           {(['all', 'failed', 'completed', 'pending', 'generating'] as StatusFilter[]).map(s => (
             <button
               key={s}
               onClick={() => setFilter(s)}
               className={`px-3 py-1 rounded-full text-sm font-medium transition-all ${
-                filter === s
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                filter === s ? 'bg-purple-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'
               }`}
             >
               {s === 'all' ? `Todos (${reports.length})` : s}
@@ -160,30 +210,20 @@ export default function AdminTestPage() {
           ))}
         </div>
 
-        {/* Admin secret para retry */}
-        <div className="mb-4 flex gap-2 items-center">
-          <input
-            type="password"
-            placeholder="ADMIN_SECRET (para reintentar reportes)"
-            value={adminSecret}
-            onChange={e => setAdminSecret(e.target.value)}
-            className="bg-white/10 border border-white/20 rounded px-3 py-1.5 text-sm text-white placeholder-gray-500 w-72 focus:outline-none focus:border-purple-400"
-          />
-          {retryResult && (
-            <span className={`text-sm ${retryResult.startsWith('✅') ? 'text-green-400' : 'text-red-400'}`}>
-              {retryResult}
-            </span>
-          )}
-        </div>
+        {actionResult && (
+          <div className={`mb-4 p-3 rounded-lg text-sm border ${
+            actionResult.startsWith('✅') ? 'bg-green-500/20 border-green-500/40 text-green-300' : 'bg-red-500/20 border-red-500/40 text-red-300'
+          }`}>
+            {actionResult}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Lista de reportes */}
+          {/* Lista */}
           <Card className="bg-white/10 backdrop-blur-md border-white/20">
             <CardHeader>
               <CardTitle className="text-white">Reportes</CardTitle>
-              <CardDescription className="text-gray-300">
-                {reports.length} resultados
-              </CardDescription>
+              <CardDescription className="text-gray-300">{reports.length} resultado{reports.length !== 1 ? 's' : ''}</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -194,10 +234,10 @@ export default function AdminTestPage() {
                 <div className="text-center py-12 text-gray-400">No hay reportes con este filtro.</div>
               ) : (
                 <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-                  {reports.map((report) => (
+                  {reports.map(report => (
                     <div
                       key={report.id}
-                      onClick={() => setSelectedReport(report)}
+                      onClick={() => { setSelectedReport(report); setActionResult(null); }}
                       className={`p-3 rounded-lg border cursor-pointer transition-all ${
                         selectedReport?.id === report.id
                           ? 'bg-white/20 border-white/40'
@@ -207,17 +247,16 @@ export default function AdminTestPage() {
                       <div className="flex justify-between items-start gap-2">
                         <div className="flex-1 min-w-0">
                           <p className="text-white font-medium text-sm truncate">
-                            {report.transaction?.birth_data?.name ?? '—'}
+                            {report.birth_name ?? report.user_name ?? '—'}
                           </p>
-                          <p className="text-xs text-gray-400 truncate">
-                            {report.transaction?.birth_data?.birth_date ?? ''}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {report.transaction?.product?.name_es ?? '—'}
-                          </p>
+                          <p className="text-xs text-gray-400 truncate">{report.user_email ?? '—'}</p>
+                          <p className="text-xs text-gray-500">{report.product_name ?? '—'}</p>
                         </div>
                         <div className="flex flex-col items-end gap-1">
                           {getStatusBadge(report.status)}
+                          {report.status === 'completed' && !report.sent_at && (
+                            <span className="text-xs text-yellow-400">sin enviar</span>
+                          )}
                           <span className="text-xs text-gray-500">
                             {new Date(report.created_at).toLocaleDateString('es-ES')}
                           </span>
@@ -230,7 +269,7 @@ export default function AdminTestPage() {
             </CardContent>
           </Card>
 
-          {/* Detalle del reporte */}
+          {/* Detalle */}
           <Card className="bg-white/10 backdrop-blur-md border-white/20">
             <CardHeader>
               <CardTitle className="text-white">Detalle</CardTitle>
@@ -242,40 +281,30 @@ export default function AdminTestPage() {
               {selectedReport ? (
                 <div className="space-y-4">
                   <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Estado:</span>
-                      {getStatusBadge(selectedReport.status)}
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Cliente:</span>
-                      <span className="text-white">{selectedReport.transaction?.birth_data?.name ?? '—'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Producto:</span>
-                      <span className="text-white">{selectedReport.transaction?.product?.name_es ?? '—'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Creado:</span>
-                      <span className="text-white text-xs">{new Date(selectedReport.created_at).toLocaleString('es-ES')}</span>
-                    </div>
+                    <Row label="Estado">{getStatusBadge(selectedReport.status)}</Row>
+                    <Row label="Cliente"><span className="text-white">{selectedReport.birth_name ?? selectedReport.user_name ?? '—'}</span></Row>
+                    <Row label="Email">
+                      <span className="text-blue-300 break-all">{selectedReport.user_email ?? '—'}</span>
+                    </Row>
+                    <Row label="Producto"><span className="text-white">{selectedReport.product_name ?? '—'}</span></Row>
+                    {selectedReport.amount != null && (
+                      <Row label="Monto"><span className="text-green-300">{selectedReport.currency} {selectedReport.amount}</span></Row>
+                    )}
+                    <Row label="Creado"><span className="text-white text-xs">{new Date(selectedReport.created_at).toLocaleString('es-ES')}</span></Row>
                     {selectedReport.generated_at && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Generado:</span>
-                        <span className="text-white text-xs">{new Date(selectedReport.generated_at).toLocaleString('es-ES')}</span>
-                      </div>
+                      <Row label="Generado"><span className="text-white text-xs">{new Date(selectedReport.generated_at).toLocaleString('es-ES')}</span></Row>
                     )}
-                    {selectedReport.sent_at && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Email enviado:</span>
-                        <span className="text-green-400 text-xs">{new Date(selectedReport.sent_at).toLocaleString('es-ES')}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Transaction ID:</span>
-                      <span className="text-gray-300 text-xs font-mono">
-                        {(selectedReport.transaction_id || selectedReport.transaction?.id || '—').slice(0, 16)}...
+                    <Row label="Email enviado">
+                      {selectedReport.sent_at
+                        ? <span className="text-green-400 text-xs">{new Date(selectedReport.sent_at).toLocaleString('es-ES')}</span>
+                        : <span className="text-yellow-400 text-xs">No enviado</span>
+                      }
+                    </Row>
+                    <Row label="Transaction ID">
+                      <span className="text-gray-300 text-xs font-mono break-all">
+                        {selectedReport.transaction_id ?? '—'}
                       </span>
-                    </div>
+                    </Row>
                   </div>
 
                   {selectedReport.error_message && (
@@ -287,32 +316,30 @@ export default function AdminTestPage() {
                     </div>
                   )}
 
-                  {/* Botón de retry para failed/generating */}
+                  {/* Acciones según estado */}
                   {(selectedReport.status === 'failed' || selectedReport.status === 'generating') && (
                     <Button
-                      onClick={() => handleRetry(selectedReport)}
-                      disabled={retrying === selectedReport.id}
+                      onClick={() => handleAction(selectedReport)}
+                      disabled={actionId === selectedReport.id}
                       className="w-full bg-purple-600 hover:bg-purple-700"
                     >
-                      {retrying === selectedReport.id ? (
-                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generando... (puede tomar 1-3 min)</>
-                      ) : (
-                        <><Send className="w-4 h-4 mr-2" />Reintentar y reenviar email</>
-                      )}
+                      {actionId === selectedReport.id
+                        ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generando... (1-3 min)</>
+                        : <><RefreshCw className="w-4 h-4 mr-2" />Regenerar y reenviar email</>
+                      }
                     </Button>
                   )}
 
-                  {selectedReport.status === 'completed' && !selectedReport.sent_at && (
+                  {selectedReport.status === 'completed' && (
                     <Button
-                      onClick={() => handleRetry(selectedReport)}
-                      disabled={retrying === selectedReport.id}
-                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      onClick={() => handleAction(selectedReport)}
+                      disabled={actionId === selectedReport.id}
+                      className={`w-full ${selectedReport.sent_at ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-600 hover:bg-blue-700'}`}
                     >
-                      {retrying === selectedReport.id ? (
-                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Reenviando...</>
-                      ) : (
-                        <><Send className="w-4 h-4 mr-2" />Reenviar email (no enviado)</>
-                      )}
+                      {actionId === selectedReport.id
+                        ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Enviando...</>
+                        : <><Send className="w-4 h-4 mr-2" />{selectedReport.sent_at ? 'Reenviar email' : 'Enviar email (pendiente)'}</>
+                      }
                     </Button>
                   )}
                 </div>
@@ -325,10 +352,16 @@ export default function AdminTestPage() {
           </Card>
         </div>
 
-        <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg text-sm text-gray-300">
-          <strong className="text-white">Cómo usar el retry:</strong> Ingresá el valor de <code className="bg-white/10 px-1 rounded">ADMIN_SECRET</code> de Vercel en el campo de arriba → seleccioná un reporte fallido → clic en "Reintentar". El reporte se regenera y el email se reenvía automáticamente.
-        </div>
       </div>
+    </div>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex justify-between items-start gap-2">
+      <span className="text-gray-400 shrink-0">{label}:</span>
+      <span className="text-right">{children}</span>
     </div>
   );
 }

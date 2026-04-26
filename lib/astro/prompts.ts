@@ -145,7 +145,8 @@ PRINCIPIOS INQUEBRANTABLES DE TU ESCRITURA:
    · No uses listas de puntos (- o *) salvo que sean estrictamente necesarias.
    · No añadas texto introductorio antes del primer ##. Empezá directamente con la primera sección.
    · Sé profundo pero conciso: evitá repetir conceptos ya mencionados en secciones anteriores.
-   · PRIORITARIO: completá TODAS las secciones antes de alcanzar el límite de longitud. Si ves que el espacio se agota, resumí los párrafos finales pero nunca dejes una sección incompleta o cortada a la mitad.`;
+   · ANTI-REPETICIÓN ABSOLUTA: las secciones finales (Síntesis, Conclusión) deben aportar ideas NUEVAS, no reescribir lo ya dicho. Si ya mencionaste un aspecto o patrón en una sección anterior, no lo vuelvas a explicar — solo referencialo en una frase y continúa con material nuevo.
+   · PRIORITARIO: completá TODAS las secciones antes de alcanzar el límite de longitud. Si ves que el espacio se agota, resumí los párrafos intermedios pero nunca dejes la Conclusión incompleta o cortada a la mitad.`;
 
 // ─── PLANTILLA: LECTURA ESENCIAL ─────────────────────────────────────────────
 
@@ -296,18 +297,20 @@ ${chart.chartSummary.angularPlanets.length > 0
   ? `Planetas en ángulos: ${chart.chartSummary.angularPlanets.join(', ')}`
   : 'Sin planetas angulares — el énfasis está en las casas sucedentes o cadentes.'}
 
-## VIII. SÍNTESIS Y MANDATO EVOLUTIVO
-Un cierre de 2 párrafos que integre TODO lo anterior en un mensaje cohesionado.
-¿Cuál es el "proyecto de vida" que esta carta sugiere para ${name}?
-No como destino fijo, sino como campo de posibilidades conscientes.
+## VIII. EL PROYECTO DE VIDA
+En exactamente DOS párrafos cortos:
+· Párrafo 1: ¿cuál es el "proyecto de vida" que esta carta propone para ${name}? No como destino fijo, sino como campo de posibilidades conscientes. Una visión de conjunto que solo emerge al ver toda la carta como un sistema.
+· Párrafo 2: el principal obstáculo interno (sombra, nodo sur, aspecto difícil) y la clave de integración más poderosa de toda la carta.
+NO resumás ni repitas análisis ya desarrollados — solo escribe lo que aún no dijiste.
 
 ## IX. CONCLUSIÓN EVOLUTIVA PERSONALIZADA
+IMPORTANTE: Esta sección NO resume lo anterior — es orientación práctica nueva. No reescribas secciones previas.
 
 ${personalContext
   ? `Usando el siguiente contexto personal de ${name}: "${personalContext}"
 
-Redactá 2 o 3 párrafos de guía práctica concreta que conecten los patrones de la carta con esta situación real. Que sea accionable, honesto y orientado al movimiento. Esta sección debe completarse íntegramente.`
-  : `Redactá 2 párrafos finales de síntesis práctica para ${name}. Que integren la carta con un mandato claro y accionable para el presente.`
+Redactá 2 o 3 párrafos de guía concreta y accionable que conecten los patrones de la carta con esta situación real. Honesto, sin vacíos, orientado al movimiento. Esta sección debe completarse íntegramente.`
+  : `Redactá 2 párrafos de orientación práctica para ${name}: qué actitud o acción concreta le pide esta carta en este momento. Directo y útil.`
 }
 
 ---`.trim();
@@ -384,18 +387,20 @@ Sin rodeos: ¿qué tendría que cambiar en cada uno para que esto funcione?
 Los Nodos Lunares de ambas personas y lo que sugieren sobre el "por qué" de este encuentro.
 ¿Qué vienen a aprender, sanar o construir juntos? ¿Qué los trajo hasta aquí?
 
-## VII. Síntesis: Lo que Construyen Juntos
-Un cierre integrador: ¿qué "tercer ser" nace de esta unión?
-¿Cuál es la invitación evolutiva para ${name1} y ${name2} como pareja?
-Un párrafo honesto sobre los desafíos reales y uno sobre los regalos únicos de este vínculo.
+## VII. El Potencial de Este Vínculo
+En exactamente DOS párrafos cortos (no más):
+· Párrafo 1: ¿qué "tercer ser" único nace de la combinación de estas dos cartas? Un regalo genuino de este vínculo que no existiría sin ambos.
+· Párrafo 2: El mayor desafío estructural de esta pareja (el que la sinastría muestra más claramente) y la clave para transformarlo.
+NO repitas análisis ya desarrollados en secciones anteriores — estos párrafos deben aportar una perspectiva de conjunto que solo es visible al ver las dos cartas como un todo.
 
 ## VIII. CONCLUSIÓN EVOLUTIVA PERSONALIZADA
+IMPORTANTE: Esta sección NO es una síntesis de lo anterior — es una guía práctica nueva sobre qué hacer ahora. No reescribas ni resumas las secciones anteriores.
 
 ${personalContext
   ? `El usuario compartió este contexto sobre la relación: "${personalContext}"
 
-Redactá 2 o 3 párrafos de guía práctica y honesta sobre hacia dónde va este vínculo desde ese punto de partida. Conectá lo que muestra la sinastría con la situación real que describen. Que sea accionable y claro, sin promesas vacías. IMPORTANTE: Esta sección debe completarse íntegramente antes de finalizar el reporte.`
-  : `Redactá 2 párrafos finales de guía práctica para ${name1} y ${name2}. Que integren los patrones de la sinastría con pasos concretos para este momento de la relación.`
+Redactá 2 o 3 párrafos de orientación concreta y honesta conectando lo que muestra la sinastría con esta situación real. Que sea accionable, sin rodeos y sin vacíos. PRIORITARIO: Esta sección debe completarse íntegramente.`
+  : `Redactá 2 párrafos de orientación práctica para ${name1} y ${name2}: qué actitud o acción concreta les pide esta sinastría en este momento de su relación. Que sea directo y útil, no solo poético.`
 }
 
 ---`.trim();

@@ -148,8 +148,8 @@ export default function GraciasPage() {
               </div>
               <span className="text-purple-300">
                 {reportStatus === 'generating'
-                  ? 'Estamos preparando tu lectura astrológica...'
-                  : 'Tu reporte está en cola de generación...'}
+                  ? 'Sincronizando efemérides y calculando tránsitos...'
+                  : 'Tu auditoría astral está en cola de procesamiento...'}
               </span>
             </div>
           )}

@@ -26,7 +26,7 @@ const PRODUCT_IDS: Record<string, string> = {
 export async function POST(request: NextRequest) {
   // â”€â”€â”€ 1. Validar entorno â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   try {
-    // validateServerEnv(); // desactivado temporalmente
+    validateServerEnv();
   } catch (envError) {
     console.error('[Checkout] Error de configuraciÃ³n:', envError);
     return NextResponse.json(
@@ -152,7 +152,9 @@ export async function POST(request: NextRequest) {
     }
 
     // â”€â”€â”€ 8. Crear transacciÃ³n pendiente en Supabase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    const DISCOUNT_CODES: Record<string,number> = { PRUEBA100: 100, ASTRAL50: 50, CUMPLE: 20, TEST99: 99 };
+    const DISCOUNT_CODES: Record<string, number> = (() => {
+      try { return JSON.parse(process.env.DISCOUNT_CODES ?? '{}'); } catch { return {}; }
+    })();
     const discountPct = discountCode ? (DISCOUNT_CODES[String(discountCode).toUpperCase()] || 0) : 0;
     const isFree = discountPct === 100;
     const finalAmount = isFree ? 0 : Math.round(productPrice.amount * (1 - discountPct / 100) * 100) / 100;
@@ -249,10 +251,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[Checkout] Error inesperado:', error);
     return NextResponse.json(
-      {
-        error: 'Error interno del servidor.',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
+      { error: 'Error interno del servidor.' },
       { status: 500 }
     );
   }

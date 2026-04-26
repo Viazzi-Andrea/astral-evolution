@@ -249,18 +249,14 @@ async function sendWhatsApp(
 export async function POST(request: NextRequest) {
   const reqId = Math.random().toString(36).slice(2, 9).toUpperCase();
 
-  // Proteger el endpoint: solo llamadas internas desde el mismo servidor.
-  // El webhook de MP llama a /api/notify-whatsapp desde el mismo proceso,
-  // por lo que el origin será el propio APP_URL o estará ausente.
-  const origin = request.headers.get('origin') ?? '';
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/$/, '');
+  // Proteger el endpoint: requiere x-internal-secret (INTERNAL_API_SECRET en Vercel).
+  // Las llamadas server-to-server no envían origin, por lo que la verificación de origen no funciona.
+  const internalSecret = process.env.INTERNAL_API_SECRET?.trim();
+  const providedSecret = request.headers.get('x-internal-secret');
 
-  if (origin && appUrl && origin !== appUrl) {
-    waLog('WARN', reqId,
-      '[LOG-WA-00] Llamada externa bloqueada en endpoint interno de WhatsApp',
-      { origin, expected: appUrl }
-    );
-    return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+  if (!internalSecret || providedSecret !== internalSecret) {
+    waLog('WARN', reqId, '[LOG-WA-00] Llamada no autorizada al endpoint interno de WhatsApp');
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
   // Validar body con Zod

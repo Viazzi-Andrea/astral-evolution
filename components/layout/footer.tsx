@@ -14,7 +14,7 @@ export function Footer() {
             </div>
             <p className="text-gray-400 text-sm max-w-md">
               Descubre tu camino evolutivo a través de la astrología de precisión.
-              Informes personalizados generados con inteligencia artificial y sabiduría ancestral.
+              Auditorías astrales personalizadas basadas en cálculos astronómicos precisos y principios herméticos evolutivos.
             </p>
           </div>
 

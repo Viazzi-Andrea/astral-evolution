@@ -329,8 +329,11 @@ export function BirthDataForm({ onSubmit, isLoading = false, showPartnerFields =
       </Button>
 
       <p className="text-xs text-gray-400 text-center">
+        Tu interpretación astral completa llegará a tu correo electrónico en 10-30 minutos tras confirmar el pago.
+      </p>
+      <p className="text-xs text-gray-500 text-center">
         Al continuar, aceptas nuestros términos de servicio y política de privacidad.
-        Tu pago es seguro y procesado mediante Mercado Pago.
+        Pago seguro mediante Mercado Pago.
       </p>
     </form>
   );

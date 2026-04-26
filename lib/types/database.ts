@@ -36,9 +36,6 @@ export interface Product {
   requires_partner_data: boolean;
   active: boolean;
   created_at: string;
-  paddle_price_id?: string;
-  paddle_price_id_latam?: string;
-  paddle_price_id_intl?: string;
 }
 
 export interface Transaction {
@@ -49,8 +46,6 @@ export interface Transaction {
   partner_birth_data_id?: string;
   stripe_payment_intent_id?: string;
   stripe_checkout_session_id?: string;
-  paddle_transaction_id?: string;
-  paddle_checkout_url?: string;
   amount: number;
   currency: string;
   country_code?: string;

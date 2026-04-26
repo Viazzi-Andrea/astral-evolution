@@ -27,7 +27,7 @@ interface Product {
   created_at: string;
 }
 
-// ─── Fallback hardcodeado (sin price IDs de Paddle) ──────────────────────────
+// ─── Datos de productos (sin DB call — evita exponer service key al cliente) ──
 const hardcodedProducts: Record<string, Product> = {
   'lectura-esencial': {
     id: 'e53d85c4-3599-4a82-80d8-5d313fc3c916',
@@ -84,56 +84,56 @@ const productDetails: Record<string, {
 }> = {
   'lectura-esencial': {
     features: [
-      'Análisis completo de Sol, Luna y Ascendente',
-      'Interpretación de los tránsitos actuales del mes',
-      'Guía de energías planetarias disponibles',
-      'Recomendaciones personalizadas para el presente',
-      'Formato PDF profesional',
+      'Interpretación psicológica de Sol, Luna y Ascendente',
+      'Configuración energética de tu carta (elemento y modalidad dominante)',
+      'El aspecto más significativo de tu vida interior',
+      'Cálculos astronómicos exactos con algoritmos Meeus/VSOP87',
+      'Tu mensaje evolutivo personalizado',
+      'Entrega completa por correo electrónico',
     ],
     deliveryTime: '10-15 minutos',
-    pages: '4-6 páginas',
+    pages: '5 secciones',
     highlights: [
       'Ideal para comenzar tu camino astrológico',
-      'Enfoque en tu presente y el mes actual',
-      'Información clara y directa',
+      'Profundidad psicológica real, no horóscopo genérico',
+      'Información clara, directa y personalizada',
     ],
   },
   'consulta-evolutiva': {
     features: [
-      'Carta natal completa con todos los planetas',
-      'Análisis profundo de las 12 casas astrológicas',
-      'Aspectos planetarios y su significado evolutivo',
-      'Tránsitos importantes del año',
-      'Nodos lunares y propósito kármico',
-      'Quirón y heridas a sanar',
-      'Revolución solar del año en curso',
-      'Plan de crecimiento personalizado',
+      'Todos los planetas (Sol a Plutón): posición, casa y significado evolutivo',
+      'Análisis de las 12 casas astrológicas (sistema Plácido)',
+      'Los 5 aspectos más significativos y cómo integrarlos',
+      'Nodo Norte: propósito kármico y dirección del alma',
+      'Las casas angulares y el eje de vida',
+      'Síntesis de tu proyecto de vida',
+      'Orientación práctica personalizada con tu contexto',
+      'Entrega completa por correo electrónico',
     ],
     deliveryTime: '20-30 minutos',
-    pages: '10-15 páginas',
+    pages: '9 secciones',
     highlights: [
       'Análisis profundo y transformador',
       'Perspectiva evolutiva y de crecimiento',
-      'Herramienta para el autoconocimiento profundo',
+      'La herramienta más completa para el autoconocimiento',
     ],
   },
   'especial-parejas': {
     features: [
-      'Sinastría completa entre ambas cartas natales',
-      'Análisis de compatibilidad Sol, Luna y Ascendente',
-      'Aspectos interplanetarios entre ambos',
-      'Casas activadas en la relación',
-      'Puntos de fortaleza de la pareja',
-      'Áreas de crecimiento y desafíos',
-      'Propósito compartido de la relación',
-      'Recomendaciones para armonizar la convivencia',
+      'Análisis de sinastría completo entre ambas cartas natales',
+      'Compatibilidad profunda: Sol, Luna y Ascendente de ambos',
+      'Los aspectos más significativos entre ambas cartas',
+      'Lo que los une, lo que los tensiona, y cómo resolverlo',
+      'El propósito compartido y el "ser" que nace de esta unión',
+      'Orientación práctica para el momento actual de la relación',
+      'Entrega completa por correo electrónico',
     ],
     deliveryTime: '25-35 minutos',
-    pages: '12-18 páginas',
+    pages: '8 secciones',
     highlights: [
       'Comprensión profunda de la dinámica relacional',
-      'Herramientas para crecer juntos',
-      'Basado en datos exactos de ambos',
+      'Honestidad sobre desafíos y sobre los regalos del vínculo',
+      'Basado en datos astronómicos exactos de ambos',
     ],
   },
 };
@@ -273,7 +273,7 @@ export default function ProductPage() {
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-blue-500/20 bg-blue-500/10 mb-6">
               <Sparkles className="h-4 w-4 text-blue-400" />
-              <span className="text-sm text-blue-300">Análisis Personalizado con IA</span>
+              <span className="text-sm text-blue-300">Auditoría Astral Personalizada</span>
             </div>
 
             <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
@@ -284,7 +284,7 @@ export default function ProductPage() {
               {product.description_es}
             </p>
 
-            <div className="flex items-center justify-center gap-8 text-sm text-gray-400">
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-sm text-gray-400">
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-blue-400" />
                 <span>Entrega en {details?.deliveryTime}</span>
@@ -299,7 +299,7 @@ export default function ProductPage() {
           {/* Cuerpo: features + precio */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
             <div className="lg:col-span-2">
-              <div className="bg-gradient-to-b from-white/5 to-transparent border border-white/10 rounded-2xl p-8">
+              <div className="bg-gradient-to-b from-white/5 to-transparent border border-white/10 rounded-2xl p-4 sm:p-8">
                 <h2 className="text-2xl font-bold mb-6">¿Qué Incluye?</h2>
                 <div className="space-y-3">
                   {details?.features.map((feature, index) => (
@@ -326,9 +326,9 @@ export default function ProductPage() {
 
             {/* Tarjeta de precio */}
             <div className="lg:col-span-1">
-              <div className="sticky top-24 bg-gradient-to-b from-white/5 to-transparent border border-white/10 rounded-2xl p-8">
+              <div className="sticky top-24 bg-gradient-to-b from-white/5 to-transparent border border-white/10 rounded-2xl p-4 sm:p-8">
                 <div className="text-center mb-6 pb-6 border-b border-white/10">
-                  <div className="text-4xl font-bold text-white mb-2">{pricing.formatted} USD</div>
+                  <div className="text-3xl sm:text-4xl font-bold text-white mb-2">{pricing.formatted} USD</div>
                   <div className="text-sm text-gray-400">Precio adaptado a tu región</div>
                   <div className="text-xs text-gray-500 mt-2">
                     Los cargos se procesan en Dólares Estadounidenses

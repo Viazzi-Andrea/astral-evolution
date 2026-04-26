@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ArrowRight, Sparkles, Moon, Sun, Star, LayoutDashboard } from 'lucide-react';
 import { FloatingOrbs } from '@/components/ui/floating-orbs';
 import { supabase } from '@/lib/supabase/client';
+import { Testimonials } from '@/components/sections/testimonials';
 
 export default function HomeDebug() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -57,12 +58,12 @@ export default function HomeDebug() {
           </div>
 
           <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent leading-tight">
-            Tu Mapa Celestial<br />Decodificado con IA
+            Tu Mapa Celestial<br />Interpretado con Precisión
           </h1>
 
           <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto leading-relaxed">
-            Informes astrológicos personalizados que combinan sabiduría milenaria con inteligencia artificial avanzada.
-            Descubre tu propósito evolutivo con precisión científica.
+            Auditorías astrales personalizadas que combinan sabiduría hermética milenaria con software astronómico de alta precisión.
+            Descubre tu propósito evolutivo con cálculos exactos de tus efemérides natales.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -179,9 +180,9 @@ export default function HomeDebug() {
                 <Sparkles className="h-6 w-6 text-blue-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold mb-2">Análisis con IA Avanzada</h3>
+                <h3 className="text-lg font-semibold mb-2">Cálculos Astronómicos de Alta Precisión</h3>
                 <p className="text-gray-400">
-                  Utilizamos modelos de inteligencia artificial de última generación para interpretar tu carta natal con precisión sin precedentes.
+                  Utilizamos algoritmos astronómicos (Meeus/VSOP87) y el sistema de casas Plácido para calcular tu carta natal con exactitud matemática.
                 </p>
               </div>
             </div>
@@ -193,7 +194,7 @@ export default function HomeDebug() {
               <div>
                 <h3 className="text-lg font-semibold mb-2">Entrega Instantánea</h3>
                 <p className="text-gray-400">
-                  Recibe tu informe astrológico completo en PDF directamente en tu correo en minutos.
+                  Recibe tu interpretación astral completa directamente en tu correo electrónico en minutos.
                 </p>
               </div>
             </div>
@@ -224,6 +225,8 @@ export default function HomeDebug() {
           </div>
         </div>
       </section>
+
+      <Testimonials />
 
       <section className="relative container mx-auto px-4 py-20">
         <div className="max-w-3xl mx-auto text-center">

@@ -48,8 +48,8 @@ export default function SuccessPage() {
                   <div className="text-left">
                     <h3 className="text-lg font-semibold mb-2">Revisa tu Email</h3>
                     <p className="text-gray-400">
-                      Recibirás tu informe completo en formato PDF directamente en tu correo electrónico.
-                      No olvides revisar tu carpeta de spam.
+                      Recibirás tu interpretación astral completa directamente en tu correo electrónico.
+                      No olvides revisar tu carpeta de spam si no lo ves en unos minutos.
                     </p>
                   </div>
                 </div>

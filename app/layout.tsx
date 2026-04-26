@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Astral Evolution | Astrología Evolutiva Personalizada',
-  description: 'Descubre tu camino evolutivo con informes astrológicos personalizados generados por IA. Análisis profundos de tu carta natal, tránsitos y sinastría de parejas.',
+  description: 'Descubre tu camino evolutivo con auditorías astrales personalizadas. Cálculos astronómicos precisos de tu carta natal, tránsitos y sinastría de parejas.',
   openGraph: {
     images: [
       {

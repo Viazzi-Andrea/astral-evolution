@@ -20,7 +20,7 @@ export default function PreciosPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 max-w-6xl mx-auto mb-16">
           <div className="group relative p-8 rounded-2xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent hover:border-blue-500/30 transition-all">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative">
@@ -29,8 +29,8 @@ export default function PreciosPage() {
               </div>
 
               <h3 className="text-2xl font-bold mb-2">Lectura Esencial</h3>
-              <div className="text-4xl font-bold text-blue-400 mb-6">
-                Desde <span className="text-3xl">USD$10.50</span>
+              <div className="text-3xl sm:text-4xl font-bold text-blue-400 mb-6">
+                Desde <span className="text-2xl sm:text-3xl">USD$10.50</span>
               </div>
 
               <ul className="space-y-3 mb-8">
@@ -40,11 +40,11 @@ export default function PreciosPage() {
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-300">Tránsitos planetarios del mes actual</span>
+                  <span className="text-gray-300">Aspectos más significativos de tu carta natal</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-300">Informe en PDF de 5-7 páginas</span>
+                  <span className="text-gray-300">Carta natal con cálculos astronómicos exactos</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
@@ -73,8 +73,8 @@ export default function PreciosPage() {
               </div>
 
               <h3 className="text-2xl font-bold mb-2">Consulta Evolutiva</h3>
-              <div className="text-4xl font-bold text-purple-400 mb-6">
-                Desde <span className="text-3xl">USD$26.60</span>
+              <div className="text-3xl sm:text-4xl font-bold text-purple-400 mb-6">
+                Desde <span className="text-2xl sm:text-3xl">USD$26.60</span>
               </div>
 
               <ul className="space-y-3 mb-8">
@@ -88,11 +88,11 @@ export default function PreciosPage() {
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-purple-400 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-300">Tránsitos planetarios anuales</span>
+                  <span className="text-gray-300">Nodo Norte: propósito kármico del alma</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-purple-400 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-300">Informe en PDF de 10-15 páginas</span>
+                  <span className="text-gray-300">Síntesis del proyecto de vida</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-purple-400 flex-shrink-0 mt-0.5" />
@@ -118,8 +118,8 @@ export default function PreciosPage() {
               </div>
 
               <h3 className="text-2xl font-bold mb-2">Especial Parejas</h3>
-              <div className="text-4xl font-bold text-cyan-400 mb-6">
-                Desde <span className="text-3xl">USD$38.50</span>
+              <div className="text-3xl sm:text-4xl font-bold text-cyan-400 mb-6">
+                Desde <span className="text-2xl sm:text-3xl">USD$38.50</span>
               </div>
 
               <ul className="space-y-3 mb-8">
@@ -137,7 +137,7 @@ export default function PreciosPage() {
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-cyan-400 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-300">Informe en PDF de 12-18 páginas</span>
+                  <span className="text-gray-300">Aspectos interplanetarios y propósito compartido</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-cyan-400 flex-shrink-0 mt-0.5" />
@@ -174,7 +174,7 @@ export default function PreciosPage() {
                 <h3 className="text-lg font-semibold text-white mb-2">¿Qué métodos de pago aceptan?</h3>
                 <p>
                   Aceptamos todas las principales tarjetas de crédito y débito a través de nuestra plataforma segura
-                  de pagos Paddle. El procesamiento es instantáneo y seguro.
+                  de pagos Mercado Pago. El procesamiento es instantáneo y seguro.
                 </p>
               </div>
 

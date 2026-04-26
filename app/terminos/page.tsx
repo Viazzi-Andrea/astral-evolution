@@ -18,8 +18,8 @@ export default function TerminosPage() {
             <h2 className="text-2xl font-semibold mb-4 text-white">2. Descripción del Servicio</h2>
             <p>
               Ofrecemos servicios de análisis astrológico personalizado basado en la información de nacimiento
-              que proporcionas. Los informes se generan mediante inteligencia artificial y conocimientos
-              astrológicos tradicionales.
+              que proporcionas. Los informes se generan mediante software astronómico especializado y
+              metodología astrológica evolutiva.
             </p>
           </section>
 
@@ -48,7 +48,7 @@ export default function TerminosPage() {
           <section>
             <h2 className="text-2xl font-semibold mb-4 text-white">5. Pagos y Reembolsos</h2>
             <p>
-              Todos los pagos se procesan de forma segura a través de Paddle. Los precios se muestran en USD
+              Todos los pagos se procesan de forma segura a través de Mercado Pago. Los precios se muestran en USD
               y pueden ajustarse según tu región. Para información detallada sobre nuestra política de reembolsos,
               consulta nuestra <a href="/reembolsos" className="text-blue-400 hover:text-blue-300 underline">Política de Reembolsos</a>.
             </p>
@@ -57,8 +57,8 @@ export default function TerminosPage() {
           <section>
             <h2 className="text-2xl font-semibold mb-4 text-white">6. Entrega del Servicio</h2>
             <p>
-              Los informes se entregan por correo electrónico en formato PDF dentro del tiempo especificado
-              para cada producto. Si no recibes tu informe, verifica tu carpeta de spam antes de contactarnos.
+              Las interpretaciones se entregan por correo electrónico dentro del tiempo especificado
+              para cada producto. Si no recibes tu análisis, verifica tu carpeta de spam antes de contactarnos.
             </p>
           </section>
 

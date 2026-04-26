@@ -19,16 +19,16 @@ const SEO_BY_REGION = {
   // ── Argentina / Uruguay ──────────────────────────────────────────────────
   'ar-uy': {
     siteName: 'Astral Evolution',
-    title: 'Astral Evolution — Carta Natal y Lectura Astrológica con IA',
+    title: 'Astral Evolution — Carta Natal y Lectura Astrológica de Alta Precisión',
     titleTemplate: '%s | Astral Evolution — Astrología Evolutiva',
     description:
-      'Obtené tu carta natal personalizada con inteligencia artificial. Análisis profundo de tu Sol, Luna, Ascendente y tránsitos. Entrega en minutos. Astrología evolutiva para tu crecimiento personal.',
+      'Obtené tu carta natal con cálculos astronómicos precisos. Análisis profundo de tu Sol, Luna, Ascendente y tránsitos. Entrega en minutos. Astrología evolutiva para tu crecimiento personal.',
     keywords: [
       'carta natal online',
       'lectura astral personalizada',
       'astrología evolutiva Argentina',
       'carta natal gratis',
-      'carta natal con IA',
+      'carta natal precisa',
       'análisis astrológico personalizado',
       'revolución solar',
       'sinastría pareja',
@@ -46,16 +46,16 @@ const SEO_BY_REGION = {
   // ── México ────────────────────────────────────────────────────────────────
   'mx': {
     siteName: 'Astral Evolution',
-    title: 'Astral Evolution — Carta Astral y Lectura Astrológica con IA',
+    title: 'Astral Evolution — Carta Astral y Lectura Astrológica Evolutiva',
     titleTemplate: '%s | Astral Evolution — Tu Carta Astral',
     description:
-      'Descubre tu carta astral personalizada con inteligencia artificial. Análisis completo de tu Sol, Luna y Ascendente con los tránsitos actuales. Entrega en minutos desde cualquier lugar de México.',
+      'Descubre tu carta astral con cálculos astronómicos precisos. Análisis completo de tu Sol, Luna y Ascendente con los tránsitos actuales. Entrega en minutos desde cualquier lugar de México.',
     keywords: [
       'carta astral México',
       'carta natal gratuita',
       'lectura astrológica online',
       'horóscopo personalizado',
-      'carta astral con inteligencia artificial',
+      'carta astral evolutiva',
       'astrología evolutiva',
       'astrólogo online México',
       'revolución solar análisis',
@@ -70,15 +70,15 @@ const SEO_BY_REGION = {
   // ── Colombia / Venezuela / Perú ───────────────────────────────────────────
   'co-ve-pe': {
     siteName: 'Astral Evolution',
-    title: 'Astral Evolution — Lectura Astrológica Personalizada con IA',
+    title: 'Astral Evolution — Lectura Astrológica Personalizada y Evolutiva',
     titleTemplate: '%s | Astral Evolution — Astrología Online',
     description:
-      'Tu carta natal y lectura astrológica generada con inteligencia artificial. Descubre tu propósito, tus talentos y los ciclos que marcan tu vida. Entrega inmediata online.',
+      'Tu carta natal y lectura astrológica calculada con software astronómico especializado. Descubre tu propósito, tus talentos y los ciclos que marcan tu vida. Entrega inmediata online.',
     keywords: [
       'carta natal online Colombia',
       'lectura astrológica personalizada',
       'astrología online',
-      'carta natal inteligencia artificial',
+      'carta natal evolutiva',
       'horóscopo natal',
       'astrólogo online',
       'compatibilidad astrológica',
@@ -95,13 +95,13 @@ const SEO_BY_REGION = {
     title: 'Astral Evolution — Carta Natal y Astrología Evolutiva Online',
     titleTemplate: '%s | Astral Evolution — Astrología Chile',
     description:
-      'Obtén tu carta natal completa y análisis astrológico evolutivo generado con IA. Sol, Luna, Ascendente, tránsitos y revolución solar. Entrega en minutos. Astrólogos online en Chile y todo el mundo.',
+      'Obtén tu carta natal completa con cálculos astronómicos de alta precisión. Sol, Luna, Ascendente, tránsitos y revolución solar. Entrega en minutos. Astrología evolutiva online en Chile y todo el mundo.',
     keywords: [
       'carta natal Chile',
       'lectura astrológica online Chile',
       'astrología evolutiva',
       'astrólogo online Chile',
-      'carta natal con IA',
+      'carta natal precisa Chile',
       'revolución solar Chile',
       'análisis natal personalizado',
       'compatibilidad de pareja astrología',
@@ -112,15 +112,15 @@ const SEO_BY_REGION = {
   // ── España ────────────────────────────────────────────────────────────────
   'es': {
     siteName: 'Astral Evolution',
-    title: 'Astral Evolution — Carta Natal y Lectura Astrológica con IA',
+    title: 'Astral Evolution — Carta Natal y Lectura Astrológica de Alta Precisión',
     titleTemplate: '%s | Astral Evolution — Astrología Evolutiva España',
     description:
-      'Obtén tu carta natal y lectura astrológica personalizada generada con inteligencia artificial. Análisis profundo de tu Sol, Luna, Ascendente y ciclos planetarios. Entrega inmediata.',
+      'Obtén tu carta natal y lectura astrológica personalizada con cálculos astronómicos precisos. Análisis profundo de tu Sol, Luna, Ascendente y ciclos planetarios. Entrega inmediata.',
     keywords: [
       'carta natal España',
       'lectura astrológica online',
       'astrólogo online',
-      'carta natal con inteligencia artificial',
+      'carta natal evolutiva España',
       'astrología evolutiva España',
       'análisis astrológico personalizado',
       'revolución solar',
@@ -134,13 +134,13 @@ const SEO_BY_REGION = {
   // ── EEUU (español) ────────────────────────────────────────────────────────
   'us-es': {
     siteName: 'Astral Evolution',
-    title: 'Astral Evolution — Birth Chart & Astrology Reading with AI',
-    titleTemplate: '%s | Astral Evolution — AI Astrology',
+    title: 'Astral Evolution — Personalized Birth Chart & Evolutionary Astrology',
+    titleTemplate: '%s | Astral Evolution — Evolutionary Astrology',
     description:
-      'Get your personalized birth chart and astrology reading generated by AI. Deep analysis of your Sun, Moon, Rising and current transits. Delivered in minutes.',
+      'Get your personalized birth chart with precise astronomical calculations. Deep analysis of your Sun, Moon, Rising and current transits. Delivered in minutes.',
     keywords: [
       'birth chart reading online',
-      'astrology reading AI',
+      'evolutionary astrology reading',
       'natal chart analysis',
       'personalized horoscope',
       'evolutionary astrology',
@@ -156,16 +156,16 @@ const SEO_BY_REGION = {
   // ── Default (fallback) ────────────────────────────────────────────────────
   'default': {
     siteName: 'Astral Evolution',
-    title: 'Astral Evolution — Carta Natal y Lectura Astrológica con IA',
+    title: 'Astral Evolution — Carta Natal y Lectura Astrológica de Alta Precisión',
     titleTemplate: '%s | Astral Evolution',
     description:
-      'Tu carta natal y lectura astrológica personalizada generada con inteligencia artificial. Análisis profundo de tu Sol, Luna y Ascendente. Entrega inmediata.',
+      'Tu carta natal y auditoría astral personalizada con cálculos astronómicos precisos. Análisis profundo de tu Sol, Luna y Ascendente. Entrega inmediata.',
     keywords: [
       'carta natal',
       'lectura astrológica',
       'astrología evolutiva',
       'astrólogo online',
-      'carta natal con IA',
+      'auditoría astral',
       'revolución solar',
     ],
     ogLocale: 'es_ES',
@@ -207,7 +207,7 @@ export function getBaseMetadata(region: keyof typeof SEO_BY_REGION = 'default'):
           url: `${BASE_URL}/og-image.jpg`,
           width: 1200,
           height: 630,
-          alt: 'Astral Evolution — Lectura Astrológica con IA',
+          alt: 'Astral Evolution — Lectura Astrológica Evolutiva',
         },
       ],
     },
@@ -232,7 +232,7 @@ export function getBaseMetadata(region: keyof typeof SEO_BY_REGION = 'default'):
 
 export const PRODUCT_METADATA: Record<string, { title: string; description: string; keywords: string[] }> = {
   'lectura-esencial': {
-    title: 'Lectura Esencial — Sol, Luna y Ascendente con IA',
+    title: 'Lectura Esencial — Sol, Luna y Ascendente · Análisis Astronómico',
     description:
       'Análisis completo de tu Sol, Luna y Ascendente con los tránsitos del mes actual. El punto de partida ideal para conocer tu mapa astrológico. Entrega en 10-15 minutos.',
     keywords: [
@@ -258,7 +258,7 @@ export const PRODUCT_METADATA: Record<string, { title: string; description: stri
     ],
   },
   'especial-parejas': {
-    title: 'Especial Parejas — Sinastría Completa con IA',
+    title: 'Especial Parejas — Sinastría Completa · Auditoría Astral',
     description:
       'Análisis completo de sinastría: compatibilidad, dinámicas relacionales, fortalezas y desafíos de tu pareja. Descubre el propósito de vuestra relación. Entrega en 25-35 minutos.',
     keywords: [
@@ -280,7 +280,7 @@ export function getOrganizationSchema() {
     name: 'Astral Evolution',
     url: BASE_URL,
     logo: `${BASE_URL}/logo.png`,
-    description: 'Plataforma de lecturas astrológicas personalizadas generadas con inteligencia artificial.',
+    description: 'Plataforma de auditorías astrales personalizadas basadas en cálculos astronómicos de alta precisión.',
     contactPoint: {
       '@type': 'ContactPoint',
       email: 'contacto@astralevolution.com',
@@ -333,7 +333,7 @@ export function getFAQSchema() {
         name: '¿Cómo se genera la lectura?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Usamos inteligencia artificial avanzada (Google Gemini) para generar un análisis profundo y personalizado basado en los datos exactos de tu nacimiento. La entrega es en minutos.',
+          text: 'Calculamos la posición exacta de los astros en el momento de tu nacimiento usando algoritmos astronómicos de alta precisión (sistema Meeus/VSOP87) y el sistema de casas Plácido. La interpretación se genera en minutos.',
         },
       },
       {

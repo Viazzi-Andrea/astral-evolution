@@ -43,8 +43,10 @@ export function middleware(request: NextRequest) {
   // ─── HTTP Basic Auth para panel de admin ───
   if (pathname.startsWith('/admin-test') || pathname.startsWith('/api/admin')) {
     // process.env.ADMIN_SECRET llega via next.config.js env (build-time).
-    // El fallback hardcoded actúa si el env var falla en edge.
-    const adminSecret = process.env.ADMIN_SECRET || 'astral2024admin';
+    const adminSecret = process.env.ADMIN_SECRET;
+    if (!adminSecret) {
+      return new NextResponse('Configuración de servidor incorrecta', { status: 500 });
+    }
 
     const authHeader = request.headers.get('authorization');
     let ok = false;
@@ -101,6 +103,22 @@ export function middleware(request: NextRequest) {
             'Retry-After': String(Math.ceil((limit.resetAt - Date.now()) / 1000)),
             'X-RateLimit-Limit': '10',
             'X-RateLimit-Remaining': '0',
+          },
+        }
+      );
+    }
+  }
+
+  if (pathname.startsWith('/api/discount') || pathname.startsWith('/api/report-status')) {
+    const limit = checkRateLimit(ip, 'general', 20, 60 * 60 * 1000); // 20/hour
+    if (!limit.allowed) {
+      return new NextResponse(
+        JSON.stringify({ error: 'Demasiadas solicitudes. Intenta en 1 hora.' }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': String(Math.ceil((limit.resetAt - Date.now()) / 1000)),
           },
         }
       );

@@ -121,8 +121,8 @@ export async function sendReportEmail({
     ${chartDataUrl ? `
     <div style="background:#f8f5ff;padding:32px 24px 8px;text-align:center;">
       <p style="margin:0 0 16px;font-size:11px;letter-spacing:3px;color:#9b7fd4;text-transform:uppercase;font-family:Georgia,serif;">✦ Tu Carta Natal ✦</p>
-      <img src="${chartDataUrl}" width="380" height="380" alt="Carta Natal Astrológica"
-        style="border-radius:50%;border:2px solid #c9a96e;max-width:100%;display:inline-block;" />
+      <img src="${chartDataUrl}" width="380" alt="Carta Natal Astrológica"
+        style="border-radius:50%;border:2px solid #c9a96e;width:100%;max-width:380px;height:auto;display:block;margin:0 auto;" />
     </div>` : ''}
 
     <!-- Separador -->

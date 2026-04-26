@@ -29,7 +29,7 @@ async function computeChart(birth: {
   birth_country: string;
 }) {
   const geo = await geocodeCity(birth.birth_city, birth.birth_country);
-  const utc = toUTCTime(birth.birth_date, birth.birth_time, geo.utcOffset);
+  const utc = toUTCTime(birth.birth_date, birth.birth_time, geo.tzName);
   return calculateNatalChart({
     year:      utc.year,
     month:     utc.month,
@@ -168,12 +168,48 @@ async function tryGemini(systemInstruction: string, userPrompt: string): Promise
   return null;
 }
 
-// ─── Orquestador: Groq primero, Gemini si falla ───────────────────────────────
+// ─── Mistral fallback (OpenAI-compatible, tier gratuito) ─────────────────────
+async function tryMistral(systemInstruction: string, userPrompt: string): Promise<string | null> {
+  const apiKey = process.env.MISTRAL_API_KEY?.replace(/[\r\n\s]/g, '');
+  if (!apiKey) return null;
+
+  const models = ['mistral-small-latest', 'open-mistral-nemo'];
+
+  for (const model of models) {
+    const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemInstruction },
+          { role: 'user',   content: userPrompt },
+        ],
+        temperature: 0.8,
+        max_tokens:  8000,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const text = data?.choices?.[0]?.message?.content;
+      if (text) {
+        console.log(`[GenerateReport] Mistral OK — modelo: ${model}`);
+        return text;
+      }
+    }
+    console.warn(`[GenerateReport] Mistral ${model} falló (${res.status})`);
+  }
+  return null;
+}
+
+// ─── Orquestador: Groq → Gemini → Mistral ────────────────────────────────────
 async function callAI(systemInstruction: string, userPrompt: string): Promise<string> {
   const text = await tryGroq(systemInstruction, userPrompt)
-            ?? await tryGemini(systemInstruction, userPrompt);
+            ?? await tryGemini(systemInstruction, userPrompt)
+            ?? await tryMistral(systemInstruction, userPrompt);
 
-  if (!text) throw new Error('Servicio de IA no disponible, intentá en unos minutos');
+  if (!text) throw new Error('Servicio de cálculo no disponible, intentá en unos minutos');
   return text;
 }
 
