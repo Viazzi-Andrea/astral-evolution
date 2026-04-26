@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase/client';
 import { Report, Transaction, Product } from '@/lib/types/database';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { FileText, Download, Sparkles, User, Plus, Clock, CircleCheck as CheckCircle, Loader as Loader2 } from 'lucide-react';
+import { FileText, ExternalLink, Sparkles, User, Plus, Clock, CircleCheck as CheckCircle, Loader as Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 interface ReportWithDetails extends Report {
@@ -58,7 +58,7 @@ export default function DashboardPage() {
             product:products!inner (*)
           )
         `)
-        .eq('transactions.user_id', userId)
+        .eq('transaction.user_id', userId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -68,10 +68,8 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDownload = async (report: ReportWithDetails) => {
-    if (!report.pdf_url) return;
-
-    window.open(report.pdf_url, '_blank');
+  const handleViewReport = (report: ReportWithDetails) => {
+    window.open(`/dashboard/reportes/${report.id}`, '_blank');
   };
 
   const getStatusIcon = (status: Report['status']) => {
@@ -241,13 +239,13 @@ export default function DashboardPage() {
                         ) : null}
                       </div>
 
-                      {report.status === 'completed' && report.pdf_url && (
+                      {report.status === 'completed' && (
                         <Button
-                          onClick={() => handleDownload(report)}
+                          onClick={() => handleViewReport(report)}
                           className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 ml-4"
                         >
-                          <Download className="w-4 h-4 mr-2" />
-                          Descargar PDF
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Ver reporte
                         </Button>
                       )}
 
