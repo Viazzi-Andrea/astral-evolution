@@ -104,6 +104,8 @@ export async function POST(request: NextRequest) {
 
   try {
     // ─── 6. Upsert de usuario (vinculado al auth user ID) ────────────────────────
+    let resolvedUserId = authUserId;
+
     const { data: user, error: userError } = await supabase
       .from('users')
       .upsert(
@@ -119,19 +121,36 @@ export async function POST(request: NextRequest) {
       .select('id')
       .single();
 
-    if (userError || !user) {
-      console.error('[Checkout] Error upsert usuario:', userError);
-      return NextResponse.json(
-        { error: 'Error al registrar el usuario. Intenta nuevamente.' },
-        { status: 500 }
-      );
+    if (userError) {
+      if (userError.code === '23505') {
+        // Email ya existe con otro ID (usuario pre-auth) — reusar ese registro
+        const { data: byEmail } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', authUser.email ?? birthData.email)
+          .single();
+        if (!byEmail) {
+          console.error('[Checkout] No se pudo resolver conflicto de email:', userError);
+          return NextResponse.json({ error: 'Error al registrar el usuario.' }, { status: 500 });
+        }
+        resolvedUserId = byEmail.id;
+        await supabase.from('users')
+          .update({ name: birthData.name, country_code: countryCode })
+          .eq('id', byEmail.id);
+      } else {
+        console.error('[Checkout] Error upsert usuario:', userError);
+        return NextResponse.json(
+          { error: 'Error al registrar el usuario. Intenta nuevamente.' },
+          { status: 500 }
+        );
+      }
     }
 
     // ─── 7. Insertar birth_data principal ────────────────────────────────────────
     const { data: birthRecord, error: birthError } = await supabase
       .from('birth_data')
       .insert({
-        user_id: user.id,
+        user_id: resolvedUserId,
         name: birthData.name,
         birth_date: birthData.birthDate,
         birth_time: birthData.birthTime,
@@ -156,7 +175,7 @@ export async function POST(request: NextRequest) {
       const { data: partnerRecord, error: partnerError } = await supabase
         .from('birth_data')
         .insert({
-          user_id: user.id,
+          user_id: resolvedUserId,
           name: partnerBirthData.name,
           birth_date: partnerBirthData.birthDate,
           birth_time: partnerBirthData.birthTime,
@@ -185,7 +204,7 @@ export async function POST(request: NextRequest) {
     const { data: transaction, error: txError } = await supabase
       .from('transactions')
       .insert({
-        user_id: user.id,
+        user_id: resolvedUserId,
         product_id: PRODUCT_IDS[productSlug],
         birth_data_id: birthRecord.id,
         partner_birth_data_id: partnerBirthId,
