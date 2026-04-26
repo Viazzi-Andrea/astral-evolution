@@ -51,11 +51,20 @@ export function Header() {
         });
         if (error) throw error;
       } else {
+        const redirectTo = typeof window !== 'undefined'
+          ? `${window.location.origin}/dashboard`
+          : 'https://astralevolution.com/dashboard';
         const { error } = await supabase.auth.signUp({
           email,
           password,
+          options: { emailRedirectTo: redirectTo },
         });
         if (error) throw error;
+        alert('Te enviamos un email de confirmación. Revisá tu bandeja de entrada.');
+        setIsAuthOpen(false);
+        setEmail('');
+        setPassword('');
+        return;
       }
       setIsAuthOpen(false);
       setEmail('');

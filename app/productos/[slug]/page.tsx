@@ -192,9 +192,16 @@ export default function ProductPage() {
         const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
         if (error) throw error;
       } else {
-        const { error } = await supabase.auth.signUp({ email: authEmail, password: authPassword });
+        const redirectTo = typeof window !== 'undefined'
+          ? `${window.location.origin}/productos/${slug}`
+          : `https://astralevolution.com/productos/${slug}`;
+        const { error } = await supabase.auth.signUp({
+          email: authEmail,
+          password: authPassword,
+          options: { emailRedirectTo: redirectTo },
+        });
         if (error) throw error;
-        setAuthError('Te enviamos un email de confirmación. Revisá tu bandeja de entrada.');
+        setAuthError('Te enviamos un email de confirmación. Revisá tu bandeja de entrada y hacé clic en el link para continuar.');
         setAuthSubmitting(false);
         return;
       }
