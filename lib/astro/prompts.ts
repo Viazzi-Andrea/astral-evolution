@@ -197,10 +197,12 @@ Escribí sin jerga: "Venus en X Casa Y" se traduce a comportamientos y necesidad
 ## IV. Trabajo, Vocación y Dinero
 
 Basándote en el Sol (Casa ${chart.planets.find(p => p.name === 'Sol')?.house}), Saturno (${chart.planets.find(p => p.name === 'Saturno')?.degreeStr}, Casa ${chart.planets.find(p => p.name === 'Saturno')?.house}) y el Medio Cielo (${chart.midheaven.degreeStr}):
-· ¿Qué tipo de trabajo le da sentido a ${name}? ¿Qué ambientes profesionales la/o potencian o agotan?
-· ¿Cuál es su relación con la autoridad, la estructura y la disciplina?
-· ¿Qué le dice su carta sobre el dinero y los recursos — qué creencias puede estar cargando?
-· ¿Cuál es su vocación más profunda, más allá del título o el sueldo?
+
+Un primer párrafo sobre qué tipo de trabajo da sentido a ${name}, qué ambientes profesionales la potencian o agotan, y cómo es su relación con la autoridad, la disciplina y el dinero.
+
+Luego listá entre 3 y 5 áreas o profesiones específicas que se alinean con su carta — no genéricas ("trabajos creativos") sino concretas (ej: "mediación de conflictos", "psicología clínica", "diseño de espacios", "emprendimiento social"). Para cada una, una oración que explique por qué encaja con su configuración específica.
+
+Cerrá con: "Esta es solo una primera aproximación a tu vocación — tu carta tiene mucho más para revelar sobre tu misión profesional."
 
 ## V. Tu Brújula Interior: El Camino que Esta Carta Propone
 
