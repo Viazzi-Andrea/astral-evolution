@@ -5,7 +5,12 @@ import { useParams } from 'next/navigation';
 import { BirthDataForm, BirthDataFormData } from '@/components/forms/birth-data-form';
 import { calculateLocalPrice, getCountryFromIP } from '@/lib/pricing';
 import { DiscountField } from '@/components/discount-field';
-import { CircleCheck as CheckCircle2, Sparkles, Clock, FileText, ShieldCheck } from 'lucide-react';
+import { CircleCheck as CheckCircle2, Sparkles, Clock, FileText, ShieldCheck, LogIn } from 'lucide-react';
+import { supabase } from '@/lib/supabase/client';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import type { Session } from '@supabase/supabase-js';
 
 // Supabase NO se usa desde el cliente.
 // Todo el acceso a la BD ocurre en /api/checkout (service_role, bypasea RLS).
@@ -157,7 +162,50 @@ export default function ProductPage() {
     formatted: '$0.00',
   });
 
-  // ── Carga del producto (solo del fallback hardcodeado — sin llamar a Supabase) 
+  // ── Auth state ───────────────────────────────────────────────────────────────
+  const [authSession, setAuthSession] = useState<Session | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  // ── Verificar sesión de auth ─────────────────────────────────────────────────
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAuthSession(session);
+      setAuthLoading(false);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthSession(session);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthSubmitting(true);
+    setAuthError(null);
+    try {
+      if (authMode === 'login') {
+        const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signUp({ email: authEmail, password: authPassword });
+        if (error) throw error;
+        setAuthError('Te enviamos un email de confirmación. Revisá tu bandeja de entrada.');
+        setAuthSubmitting(false);
+        return;
+      }
+    } catch (err: any) {
+      setAuthError(err.message ?? 'Error de autenticación');
+    } finally {
+      setAuthSubmitting(false);
+    }
+  };
+
+  // ── Carga del producto (solo del fallback hardcodeado — sin llamar a Supabase)
   useEffect(() => {
     async function loadProduct() {
       try {
@@ -194,12 +242,19 @@ export default function ProductPage() {
   // ── Submit: manda todo al servidor → /api/checkout hace el resto ─────────────
   const handleFormSubmit = async (formData: BirthDataFormData, partnerData?: Partial<BirthDataFormData>) => {
     if (!product) return;
+    if (!authSession) {
+      alert('Debes iniciar sesión para continuar.');
+      return;
+    }
     setSubmitting(true);
 
     try {
       const response = await fetch('/api/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authSession.access_token}`,
+        },
         body: JSON.stringify({
           productSlug: product.slug,
           productId: product.id,
@@ -353,16 +408,110 @@ export default function ProductPage() {
             </div>
           </div>
 
-          {/* Formulario */}
+          {/* Formulario / Gate de autenticación */}
           <div className="max-w-3xl mx-auto">
             <div className="bg-gradient-to-b from-white/5 to-transparent border border-white/10 rounded-2xl p-8">
-              <h2 className="text-2xl font-bold mb-6 text-center">Completa tus Datos</h2>
-              <DiscountField onDiscount={(pct, code) => { setDiscountPercent(pct); setDiscountCode(code); }} />
-              <BirthDataForm
-                onSubmit={handleFormSubmit}
-                isLoading={submitting}
-                showPartnerFields={product.requires_partner_data}
-              />
+
+              {authLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500" />
+                </div>
+              ) : !authSession ? (
+                /* Gate de autenticación */
+                <div className="max-w-sm mx-auto">
+                  <div className="text-center mb-8">
+                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-blue-500/10 border border-blue-500/30 mb-4">
+                      <LogIn className="h-7 w-7 text-blue-400" />
+                    </div>
+                    <h2 className="text-2xl font-bold mb-2">Crea tu cuenta</h2>
+                    <p className="text-gray-400 text-sm">
+                      Necesitás una cuenta para guardar tu lectura y acceder a ella cuando quieras.
+                    </p>
+                  </div>
+
+                  <div className="flex rounded-lg border border-white/10 mb-6 overflow-hidden">
+                    <button
+                      onClick={() => { setAuthMode('login'); setAuthError(null); }}
+                      className={`flex-1 py-2.5 text-sm font-medium transition-colors ${authMode === 'login' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                    >
+                      Iniciar sesión
+                    </button>
+                    <button
+                      onClick={() => { setAuthMode('register'); setAuthError(null); }}
+                      className={`flex-1 py-2.5 text-sm font-medium transition-colors ${authMode === 'register' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                    >
+                      Crear cuenta
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleAuthSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="auth-email">Email</Label>
+                      <Input
+                        id="auth-email"
+                        type="email"
+                        value={authEmail}
+                        onChange={(e) => setAuthEmail(e.target.value)}
+                        required
+                        className="bg-white/5 border-white/10 text-white"
+                        placeholder="tu@email.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="auth-password">Contraseña</Label>
+                      <Input
+                        id="auth-password"
+                        type="password"
+                        value={authPassword}
+                        onChange={(e) => setAuthPassword(e.target.value)}
+                        required
+                        minLength={6}
+                        className="bg-white/5 border-white/10 text-white"
+                        placeholder="••••••••"
+                      />
+                      {authMode === 'register' && (
+                        <p className="text-xs text-gray-500">Mínimo 6 caracteres</p>
+                      )}
+                    </div>
+
+                    {authError && (
+                      <p className={`text-sm ${authError.includes('confirmación') ? 'text-green-400' : 'text-red-400'}`}>
+                        {authError}
+                      </p>
+                    )}
+
+                    <Button
+                      type="submit"
+                      disabled={authSubmitting}
+                      className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+                    >
+                      {authSubmitting ? 'Procesando...' : authMode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
+                    </Button>
+                  </form>
+
+                  <p className="text-xs text-gray-500 text-center mt-4">
+                    Tu cuenta es gratuita. Guardamos tus lecturas de forma segura.
+                  </p>
+                </div>
+              ) : (
+                /* Formulario de datos de nacimiento (usuario autenticado) */
+                <>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold">Completa tus Datos</h2>
+                    <div className="text-sm text-gray-400 flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-400" />
+                      {authSession.user.email}
+                    </div>
+                  </div>
+                  <DiscountField onDiscount={(pct, code) => { setDiscountPercent(pct); setDiscountCode(code); }} />
+                  <BirthDataForm
+                    onSubmit={handleFormSubmit}
+                    isLoading={submitting}
+                    showPartnerFields={product.requires_partner_data}
+                  />
+                </>
+              )}
+
             </div>
           </div>
 
