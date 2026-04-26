@@ -39,6 +39,7 @@ export default function AdminTestPage() {
   const [health, setHealth]               = useState<any>(null);
   const [healthLoading, setHealthLoading] = useState(false);
   const [deletingId, setDeletingId]       = useState<string | null>(null);
+  const [search, setSearch]               = useState('');
 
   const fetchHealth = useCallback(async (secret: string) => {
     setHealthLoading(true);
@@ -168,6 +169,15 @@ export default function AdminTestPage() {
   const failedCount = reports.filter(r => r.status === 'failed').length;
   const unsentCount = reports.filter(r => r.status === 'completed' && !r.sent_at).length;
 
+  const searchLower = search.toLowerCase();
+  const visibleReports = searchLower
+    ? reports.filter(r =>
+        r.user_email?.toLowerCase().includes(searchLower) ||
+        r.birth_name?.toLowerCase().includes(searchLower) ||
+        r.user_name?.toLowerCase().includes(searchLower)
+      )
+    : reports;
+
   // ─── Pantalla de login si no hay secret ──────────────────────────────────────
   if (!adminSecret) {
     return (
@@ -292,7 +302,7 @@ export default function AdminTestPage() {
 
         {actionResult && (
           <div className={`mb-4 p-3 rounded-lg text-sm border ${
-            actionResult.startsWith('✅') ? 'bg-green-500/20 border-green-500/40 text-green-300' : 'bg-red-500/20 border-red-500/40 text-red-300'
+            actionResult.startsWith('✅') || actionResult.startsWith('🗑️') ? 'bg-green-500/20 border-green-500/40 text-green-300' : 'bg-red-500/20 border-red-500/40 text-red-300'
           }`}>
             {actionResult}
           </div>
@@ -302,19 +312,32 @@ export default function AdminTestPage() {
           {/* Lista */}
           <Card className="bg-white/10 backdrop-blur-md border-white/20">
             <CardHeader>
-              <CardTitle className="text-white">Reportes</CardTitle>
-              <CardDescription className="text-gray-300">{reports.length} resultado{reports.length !== 1 ? 's' : ''}</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-white">Reportes</CardTitle>
+                  <CardDescription className="text-gray-300">
+                    {visibleReports.length}{search ? ` de ${reports.length}` : ''} resultado{visibleReports.length !== 1 ? 's' : ''}
+                  </CardDescription>
+                </div>
+              </div>
+              <input
+                type="text"
+                placeholder="Buscar por email o nombre..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="mt-2 w-full bg-white/10 border border-white/20 rounded px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-400"
+              />
             </CardHeader>
             <CardContent>
               {loading ? (
                 <div className="flex justify-center items-center py-12">
                   <Loader2 className="w-8 h-8 animate-spin text-white" />
                 </div>
-              ) : reports.length === 0 ? (
-                <div className="text-center py-12 text-gray-400">No hay reportes con este filtro.</div>
+              ) : visibleReports.length === 0 ? (
+                <div className="text-center py-12 text-gray-400">{search ? 'Sin resultados para esa búsqueda.' : 'No hay reportes con este filtro.'}</div>
               ) : (
                 <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-                  {reports.map(report => (
+                  {visibleReports.map(report => (
                     <div
                       key={report.id}
                       onClick={() => { setSelectedReport(report); setActionResult(null); }}

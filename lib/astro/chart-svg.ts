@@ -21,9 +21,9 @@ const SIGN_GLYPHS = ['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑'
 
 // Colores por elemento (Fuego, Tierra, Aire, Agua — orden zodiacal)
 const SEG_COLORS = [
-  '#6b1a1a','#1a4a1a','#1a2a6b','#0f2a3d',
-  '#6b1a1a','#1a4a1a','#1a2a6b','#2d0f5c',
-  '#6b1a1a','#1a4a1a','#1a2a6b','#2d0f5c',
+  '#7a2020','#1e5a1e','#1e3580','#12344a',
+  '#7a2020','#1e5a1e','#1e3580','#3a1270',
+  '#7a2020','#1e5a1e','#1e3580','#3a1270',
 ];
 
 const PLANET_GLYPHS: Record<string, string> = {
@@ -83,8 +83,8 @@ function renderPlanets(
 
     // Círculo + glifo del planeta
     const [px, py] = pt(r, lon);
-    out.push(`<circle cx="${f(px)}" cy="${f(py)}" r="11" fill="#0d0522" stroke="${glyphColor}" stroke-width="0.8" opacity="0.9"/>`);
-    out.push(`<text x="${f(px)}" y="${f(py)}" text-anchor="middle" dominant-baseline="central" font-size="13" fill="${glyphColor}" font-family="serif">${glyph}</text>`);
+    out.push(`<circle cx="${f(px)}" cy="${f(py)}" r="12" fill="#1e1245" stroke="${glyphColor}" stroke-width="1.5" opacity="1"/>`);
+    out.push(`<text x="${f(px)}" y="${f(py)}" text-anchor="middle" dominant-baseline="central" font-size="13" fill="${glyphColor}" font-family="serif" font-weight="bold">${glyph}</text>`);
 
     if (p.retrograde) {
       out.push(`<text x="${f(px + 9)}" y="${f(py - 9)}" font-size="7" fill="#e74c3c" font-family="sans-serif">℞</text>`);
@@ -140,11 +140,11 @@ function buildWheel(
 
   // Planetas carta 1
   const r1 = isSyn ? R_P1 : (R_P1 + R_P2) / 2;
-  parts.push(renderPlanets(chart1, r1, '#e0d0ff', '#c4b5fd'));
+  parts.push(renderPlanets(chart1, r1, '#ffffff', '#d4bfff'));
 
   // Planetas carta 2 (sinastría)
   if (isSyn && chart2) {
-    parts.push(renderPlanets(chart2, R_P2, '#ffd97d', '#c9a96e'));
+    parts.push(renderPlanets(chart2, R_P2, '#ffd97d', '#f0c040'));
   }
 
   // ASC y MC (carta 1)
