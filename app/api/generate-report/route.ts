@@ -9,6 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 import { GenerateReportSchema, sanitizeAIOutput } from '@/lib/validations/schemas';
 import { sendReportEmail } from '@/lib/email/send-report';
 import { calculateNatalChart } from '@/lib/astro/ephemeris';
+import type { BirthInput } from '@/lib/astro/ephemeris';
 import { geocodeCity, toUTCTime } from '@/lib/astro/geocode';
 import {
   buildEssentialReadingPrompt,
@@ -18,8 +19,20 @@ import {
 import {
   generateNatalChartSVG,
   generateSynastryChartSVG,
-  svgToDataUrl,
 } from '@/lib/astro/chart-svg';
+import {
+  computeCompositePoints,
+  computeDraconicPoints,
+  computeDavisonChart,
+  computeProgressedChart,
+  computeCurrentTransits,
+  getPartileAspects,
+  getTransitsOnComposite,
+  formatCompositeForPrompt,
+  formatProgressedForPrompt,
+  formatTransitsForPrompt,
+  formatDraconicKeyPoints,
+} from '@/lib/astro/synastry-charts';
 
 // ─── Geocodifica y calcula carta natal ────────────────────────────────────────
 async function computeChart(birth: {
@@ -39,6 +52,27 @@ async function computeChart(birth: {
     latitude:  geo.latitude,
     longitude: geo.longitude,
   });
+}
+
+/** Calcula carta natal y devuelve también el BirthInput (para cartas avanzadas). */
+async function computeChartFull(birth: {
+  birth_date: string;
+  birth_time: string;
+  birth_city: string;
+  birth_country: string;
+}) {
+  const geo = await geocodeCity(birth.birth_city, birth.birth_country);
+  const utc = toUTCTime(birth.birth_date, birth.birth_time, geo.tzName);
+  const input: BirthInput = {
+    year:      utc.year,
+    month:     utc.month,
+    day:       utc.day,
+    hour:      utc.hour,
+    minute:    utc.minute,
+    latitude:  geo.latitude,
+    longitude: geo.longitude,
+  };
+  return { chart: calculateNatalChart(input), input };
 }
 
 // ─── Selecciona el prompt y genera SVG ───────────────────────────────────────
@@ -62,13 +96,43 @@ async function buildPromptAndChart(
 ): Promise<{ systemInstruction: string; userPrompt: string; svg: string }> {
 
   if (productSlug === 'especial-parejas' && partnerData) {
-    const [chart1, chart2] = await Promise.all([
-      computeChart(birthData),
-      computeChart(partnerData),
+    const [result1, result2] = await Promise.all([
+      computeChartFull(birthData),
+      computeChartFull(partnerData),
     ]);
+    const { chart: chart1, input: input1 } = result1;
+    const { chart: chart2, input: input2 } = result2;
+
+    // Cartas avanzadas
+    const now        = new Date();
+    const todayY     = now.getUTCFullYear();
+    const todayM     = now.getUTCMonth() + 1;
+    const todayD     = now.getUTCDate();
+
+    const composite     = computeCompositePoints(chart1, chart2);
+    const draconic1     = computeDraconicPoints(chart1);
+    const draconic2     = computeDraconicPoints(chart2);
+    const davisonChart  = computeDavisonChart(input1, input2);
+    const progressed1   = computeProgressedChart(input1, todayY, todayM, todayD);
+    const progressed2   = computeProgressedChart(input2, todayY, todayM, todayD);
+    const transits      = computeCurrentTransits();
+    const partileAspects   = getPartileAspects(chart1, chart2);
+    const transitAspects   = getTransitsOnComposite(composite, transits);
+
     const svg = generateSynastryChartSVG(chart1, birthData.name, chart2, partnerData.name);
     return {
-      ...buildSynastryPrompt(chart1, birthData.name, chart2, partnerData.name, birthData.personal_context ?? undefined),
+      ...buildSynastryPrompt(chart1, birthData.name, chart2, partnerData.name, {
+        composite,
+        draconic1,
+        draconic2,
+        davisonChart,
+        progressed1,
+        progressed2,
+        transits,
+        partileAspects,
+        transitAspects,
+        personalContext: birthData.personal_context ?? undefined,
+      }),
       svg,
     };
   }
@@ -293,17 +357,20 @@ export async function POST(request: NextRequest) {
     // Calcular efemérides reales, construir prompt y generar SVG
     const { systemInstruction, userPrompt, svg } = await buildPromptAndChart(productSlug, birthData, partnerData);
 
-    // Subir SVG a Supabase Storage para obtener URL pública (Gmail bloquea data: URLs)
+    // Convertir SVG → PNG y subir a Supabase Storage (Gmail bloquea SVG en <img>)
     let chartImageUrl: string | undefined;
     try {
-      const chartPath = `charts/${transactionId}.svg`;
-      await supabase.storage.from('charts').upload(chartPath, Buffer.from(svg, 'utf-8'), {
-        contentType: 'image/svg+xml',
+      const { Resvg } = await import('@resvg/resvg-js');
+      const resvg     = new Resvg(svg, { background: 'rgba(10,6,24,1)', fitTo: { mode: 'width', value: 480 } });
+      const pngBuffer = resvg.render().asPng();
+      const chartPath = `charts/${transactionId}.png`;
+      await supabase.storage.from('charts').upload(chartPath, pngBuffer, {
+        contentType: 'image/png',
         upsert: true,
       });
       const { data: urlData } = supabase.storage.from('charts').getPublicUrl(chartPath);
       chartImageUrl = urlData.publicUrl;
-      console.log(`[GenerateReport] Chart SVG subido: ${chartImageUrl}`);
+      console.log(`[GenerateReport] Chart PNG subido: ${chartImageUrl}`);
     } catch (chartErr) {
       console.warn('[GenerateReport] ⚠️ Chart upload falló, se omite imagen en email:', chartErr);
     }

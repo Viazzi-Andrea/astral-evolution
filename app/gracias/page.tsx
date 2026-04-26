@@ -207,7 +207,7 @@ export default function GraciasPage() {
             </div>
             <div className="flex items-start gap-3">
               <div className="w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs text-purple-300">2</div>
-              <span>Recibirás un email con tu reporte completo en los próximos 10-30 minutos.</span>
+              <span>Recibirás un email con tu reporte completo en pocos minutos. Los análisis más simples llegan en menos de 1 minuto.</span>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs text-purple-300">3</div>

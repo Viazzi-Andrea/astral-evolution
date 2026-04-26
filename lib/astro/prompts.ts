@@ -12,6 +12,13 @@
  */
 
 import type { NatalChart, PlanetPosition, AspectData } from './ephemeris';
+import type { CompositePoint } from './synastry-charts';
+import {
+  formatCompositeForPrompt,
+  formatProgressedForPrompt,
+  formatTransitsForPrompt,
+  formatDraconicKeyPoints,
+} from './synastry-charts';
 
 // ─── Utilidades de formateo ───────────────────────────────────────────────────
 
@@ -346,90 +353,251 @@ Cerrá con una sola oración que recuerde que la carta natal muestra tendencias 
   return { systemInstruction: SYSTEM_INSTRUCTION, userPrompt };
 }
 
-// ─── PLANTILLA: ESPECIAL PAREJAS (SINASTRÍA) ─────────────────────────────────
+// ─── PLANTILLA: ESPECIAL PAREJAS (SINASTRÍA + CARTAS AVANZADAS) ──────────────
+
+interface SynastryExtras {
+  composite:       CompositePoint[];
+  draconic1:       CompositePoint[];
+  draconic2:       CompositePoint[];
+  davisonChart:    NatalChart;
+  progressed1:     NatalChart;
+  progressed2:     NatalChart;
+  transits:        CompositePoint[];
+  partileAspects:  string[];
+  transitAspects:  string[];
+  personalContext?: string;
+}
+
+/** Busca aspectos que aparecen tanto en sinastría como en la carta de Davison
+ *  (misma pareja planeta-planeta, mismo tipo). Esos son los "inevitables". */
+function findDestinyThemes(
+  synAspects:   AspectData[],
+  davisonChart: NatalChart,
+): string[] {
+  const result: string[] = [];
+  for (const syn of synAspects.slice(0, 12)) {
+    const p1 = syn.planet1.replace(/\s*\([^)]*\)/g, '').trim();
+    const p2 = syn.planet2.replace(/\s*\([^)]*\)/g, '').trim();
+    for (const dav of davisonChart.aspects) {
+      const match =
+        ((dav.planet1 === p1 && dav.planet2 === p2) ||
+         (dav.planet1 === p2 && dav.planet2 === p1)) &&
+        dav.aspect === syn.aspect;
+      if (match) {
+        result.push(`**✦ DESTINO INEVITABLE — ${p1} ${syn.aspect} ${p2}** (sinastría orbe ${syn.orb.toFixed(1)}° · confirmado en Davison)`);
+        break;
+      }
+    }
+  }
+  return result;
+}
 
 export function buildSynastryPrompt(
   chart1: NatalChart,
   name1:  string,
   chart2: NatalChart,
   name2:  string,
-  personalContext?: string,
+  extras: SynastryExtras,
 ): { systemInstruction: string; userPrompt: string } {
+
+  const { composite, draconic1, draconic2, davisonChart, progressed1, progressed2,
+          transits, partileAspects, transitAspects, personalContext } = extras;
 
   const data1 = buildAstroDataBlockCompact(chart1, name1);
   const data2 = buildAstroDataBlockCompact(chart2, name2);
 
-  // Calcular aspectos entre cartas (sinastría)
-  const synAspects = calculateSynastryAspects(chart1, chart2);
+  const synAspects    = calculateSynastryAspects(chart1, chart2);
+  const destinyThemes = findDestinyThemes(synAspects, davisonChart);
+
+  const venus1 = chart1.planets.find(p => p.name === 'Venus');
+  const venus2 = chart2.planets.find(p => p.name === 'Venus');
+  const mars1  = chart1.planets.find(p => p.name === 'Marte');
+  const mars2  = chart2.planets.find(p => p.name === 'Marte');
+  const chiron = transits.find(t => t.name === 'Quirón');
 
   const userPrompt = `
 ${data1}
 
 ${data2}
 
-ASPECTOS DE SINASTRÍA (posiciones de ${name1} vs posiciones de ${name2}):
-${synAspects.length > 0 ? synAspects.slice(0, 7).map(formatAspect).join('\n') : 'Calcular manualmente con los datos anteriores.'}
+════ SINASTRÍA — ASPECTOS (por orbe) ════
+${synAspects.slice(0, 8).map(formatAspect).join('\n')}
 
-TAREA: Genera un "Especial Parejas — Lectura de Sinastría" para ${name1} y ${name2}.
-Extensión total: 1800–2200 palabras. Con profundidad real.
-IMPORTANTE — DISTRIBUCIÓN DE ESPACIO: Para garantizar que el reporte llegue completo sin truncarse, respeta estos límites por sección:
-· Secciones I, II, IV: máximo 250 palabras cada una.
-· Secciones III, V, VI: máximo 300 palabras cada una.
-· Sección VII (Síntesis): máximo 200 palabras.
-· Sección VIII (CONCLUSIÓN): mínimo 200 palabras — siempre debe completarse íntegramente.
-Si ves que te acercás al límite, resumí las secciones III-VI para garantizar que la Conclusión se genere completa.
-PROHIBIDO: No uses "él" ni "ella" — usa siempre los nombres (${name1} y ${name2}) directamente.
+${partileAspects.length > 0 ? `ASPECTOS PARTILES (< 1° — máxima intensidad):\n${partileAspects.join('\n')}` : ''}
+
+${destinyThemes.length > 0 ? `TEMAS DE DESTINO (idénticos en sinastría y Davison):\n${destinyThemes.join('\n')}` : ''}
+
+════ CARTA COMPUESTA (puntos medios) ════
+${formatCompositeForPrompt(composite)}
+
+════ CARTA DE DAVISON ════
+Sol: ${davisonChart.planets.find(p => p.name === 'Sol')?.degreeStr} — Casa ${davisonChart.planets.find(p => p.name === 'Sol')?.house}
+Luna: ${davisonChart.planets.find(p => p.name === 'Luna')?.degreeStr} — Casa ${davisonChart.planets.find(p => p.name === 'Luna')?.house}
+Venus: ${davisonChart.planets.find(p => p.name === 'Venus')?.degreeStr} | Marte: ${davisonChart.planets.find(p => p.name === 'Marte')?.degreeStr}
+ASC Davison: ${davisonChart.ascendant.degreeStr} | MC: ${davisonChart.midheaven.degreeStr}
+Júpiter: ${davisonChart.planets.find(p => p.name === 'Júpiter')?.degreeStr} | Saturno: ${davisonChart.planets.find(p => p.name === 'Saturno')?.degreeStr}
+
+════ CARTA DRACÓNICA (dimensión del alma) ════
+${name1.toUpperCase()}:
+${formatDraconicKeyPoints(draconic1)}
+Nodo Norte natal: ${chart1.northNode.degreeStr}
+
+${name2.toUpperCase()}:
+${formatDraconicKeyPoints(draconic2)}
+Nodo Norte natal: ${chart2.northNode.degreeStr}
+
+════ CARTAS PROGRESADAS (hoy) ════
+${name1.toUpperCase()} — progresiones actuales:
+${formatProgressedForPrompt(progressed1, chart1)}
+
+${name2.toUpperCase()} — progresiones actuales:
+${formatProgressedForPrompt(progressed2, chart2)}
+
+════ TRÁNSITOS ACTUALES ════
+${formatTransitsForPrompt(transits)}
+
+${transitAspects.length > 0 ? `TRÁNSITOS SOBRE CARTA COMPUESTA:\n${transitAspects.join('\n')}` : 'Sin tránsitos lentos significativos sobre la carta compuesta en este momento.'}
+${chiron ? `Quirón transitando: ${chiron.posStr} — temas de sanación activos colectivamente.` : ''}
+
+---
+
+TAREA: Genera el "Especial Parejas — Análisis Multidimensional" para ${name1} y ${name2}.
+Extensión total: 2500–3000 palabras. Profundidad real en cada sección.
+PROHIBIDO: No uses "él" ni "ella" — usá siempre los nombres directamente.
+PRIORIDAD DE INTERPRETACIÓN:
+1. Los aspectos partiles y los temas de "DESTINO INEVITABLE" son los más importantes.
+2. La carta dracónica revela el propósito del alma — úsala para la capa kármica.
+3. La carta progresada revela lo que está evolucionando AHORA en cada persona.
+4. Los tránsitos sobre la compuesta revelan lo que la relación está atravesando AHORA.
+5. Buscá el hilo conductor entre la dimensión del alma (dracónica) y el momento presente (progresada + tránsitos).
+
+DISTRIBUCIÓN DE ESPACIO (para no truncar el cierre):
+· Secciones I, III, VIII: máximo 220 palabras cada una.
+· Secciones II, IV, V, VI, VII: máximo 280 palabras cada una.
+· Sección IX (hilo conductor): mínimo 250 palabras — NUNCA omitir.
+· Sección X (orientación): mínimo 200 palabras — NUNCA omitir.
+Si sentís que el espacio se agota, comprimí las secciones II-VII, pero siempre completá IX y X.
 
 ---
 
 # ✦ ${name1.toUpperCase()} & ${name2.toUpperCase()}
 
-## I. ${name1} & ${name2} — Dos Mundos que se Encuentran
-Describe la "personalidad astrológica" de cada persona (Sol, Luna y Ascendente).
-¿Qué energía, necesidades y forma de relacionarse trae cada una a este vínculo?
+---
 
-## II. El Corazón de la Conexión
-- Sol de ${name1} (${chart1.chartSummary.sunSign}) con Sol de ${name2} (${chart2.chartSummary.sunSign}):
-  ¿Cómo se encuentran sus esencias? ¿Se complementan o generan fricción creativa?
-- Luna de ${name1} (${chart1.chartSummary.moonSign}) con Luna de ${name2} (${chart2.chartSummary.moonSign}):
-  La resonancia emocional. ¿Se sienten seguros y en casa juntos o hay tensión emocional de fondo?
+## I. Dos Mundos que se Encuentran
 
-## III. Lo que los Une y lo que los Tensiona
-Analiza los 4–5 aspectos de sinastría más significativos.
-Para cada uno: qué activa en cada persona, cómo se vive en el día a día de la relación,
-y qué desafío o don concreto trae. Sé honesto sobre los aspectos difíciles.
+Describí la "personalidad astrológica" de cada persona usando Sol, Luna y Ascendente.
+¿Qué energía, qué necesidades emocionales y qué forma de relacionarse trae cada una a este vínculo?
+Una persona tiene el Sol en ${chart1.chartSummary.sunSign}, Luna en ${chart1.chartSummary.moonSign} y ASC en ${chart1.chartSummary.ascendantSign}.
+La otra tiene el Sol en ${chart2.chartSummary.sunSign}, Luna en ${chart2.chartSummary.moonSign} y ASC en ${chart2.chartSummary.ascendantSign}.
+¿Cómo se complementan o tensionan estas dos configuraciones?
 
-## IV. Amor, Atracción y Deseo
-- Cómo da y recibe amor ${name1} (Venus en ${chart1.planets.find(p => p.name === 'Venus')?.degreeStr}).
-- Cómo da y recibe amor ${name2} (Venus en ${chart2.planets.find(p => p.name === 'Venus')?.degreeStr}).
-- ¿Hablan el mismo idioma afectivo o cada uno expresa y necesita el amor de manera diferente?
-- La atracción y el deseo: qué los acerca físicamente y emocionalmente.
+---
 
-## V. Los Compromisos que Esta Relación Pide
-Qué exige esta relación de cada persona para poder sostenerse y crecer.
-Si hay aspectos de Saturno entre las cartas, explica qué estructura o responsabilidad traen.
-Si no, habla sobre los compromisos implícitos que la combinación de sus cartas demanda.
-Sin rodeos: ¿qué tendría que cambiar en cada uno para que esto funcione?
+## II. La Atracción que los Une — Sinastría Natal
 
-## VI. Por Qué se Encontraron: El Propósito Compartido
-Los Nodos Lunares de ambas personas y lo que sugieren sobre el "por qué" de este encuentro.
-¿Qué vienen a aprender, sanar o construir juntos? ¿Qué los trajo hasta aquí?
+${partileAspects.length > 0
+  ? `Comenzá OBLIGATORIAMENTE con los aspectos partiles (< 1° de orbe), que son los que se sienten en la piel. Describí cómo se vive cada uno en el día a día de la relación.`
+  : `Analizá los aspectos de sinastría más significativos.`}
+${destinyThemes.length > 0
+  ? `Para los temas marcados como "DESTINO INEVITABLE" (aparecen en sinastría Y Davison), usá ese término exacto y explicá por qué su repetición en dos métodos distintos los hace inevitables.`
+  : ''}
+Analizá los 4–5 aspectos de sinastría más importantes: qué activan en cada persona, cómo se viven cotidianamente, y qué don o desafío aportan. Sé honesto sobre los aspectos difíciles.
 
-## VII. El Potencial de Este Vínculo
-En exactamente DOS párrafos cortos (no más):
-· Párrafo 1: ¿qué "tercer ser" único nace de la combinación de estas dos cartas? Un regalo genuino de este vínculo que no existiría sin ambos.
-· Párrafo 2: El mayor desafío estructural de esta pareja (el que la sinastría muestra más claramente) y la clave para transformarlo.
-NO repitas análisis ya desarrollados en secciones anteriores — estos párrafos deben aportar una perspectiva de conjunto que solo es visible al ver las dos cartas como un todo.
+---
 
-## VIII. CONCLUSIÓN EVOLUTIVA PERSONALIZADA
-IMPORTANTE: Esta sección NO es una síntesis de lo anterior — es una guía práctica nueva sobre qué hacer ahora. No reescribas ni resumas las secciones anteriores.
+## III. El Alma de Este Encuentro — Carta Dracónica
 
+La carta dracónica muestra los propósitos del alma, lo que cada persona "trae grabado" antes de esta vida.
+Interpretá el Sol y Luna dracónicos de ${name1}: ¿qué misión de alma trae a este vínculo?
+Interpretá el Sol y Luna dracónicos de ${name2}: ¿qué misión de alma trae a este vínculo?
+¿Hay resonancia entre sus cartas dracónicas? ¿Se "reconocen" a nivel profundo?
+Mencioná el Nodo Norte de cada uno y lo que sugiere sobre el aprendizaje que vinieron a hacer juntos.
+
+---
+
+## IV. La Alquimia de la Unión — Carta Compuesta
+
+La carta compuesta (punto medio entre ambas cartas) describe al "tercer ser" que nace de esta unión.
+Interpretá el Sol compuesto: ¿cuál es el propósito central de esta relación como entidad?
+Interpretá la Luna compuesta: ¿qué necesita emocionalmente esta relación para estar bien?
+Interpretá Venus, Marte y el ASC compuestos: ¿cómo se muestra esta relación al mundo?
+¿Qué personalidad tiene este vínculo cuando funciona en su mejor versión?
+
+---
+
+## V. El Punto de Encuentro — Carta de Davison
+
+La carta de Davison revela dónde en el tiempo y el espacio se materializa este encuentro.
+Interpretá el Sol de Davison: ¿cuál es el corazón de este vínculo?
+Interpretá la Luna de Davison: ¿cuál es el hogar emocional de esta pareja?
+${destinyThemes.length > 0
+  ? `Mencioná los temas de DESTINO INEVITABLE (idénticos en sinastría y Davison) y explicá por qué esta coincidencia entre dos métodos independientes sugiere que este encuentro no es aleatorio.`
+  : `Compará con los aspectos de sinastría: ¿hay patrones que se repiten en ambos métodos?`}
+
+---
+
+## VI. Amor, Atracción y Deseo
+
+- ${name1}: Venus en ${venus1?.degreeStr ?? 'no disponible'}, Marte en ${mars1?.degreeStr ?? 'no disponible'}.
+  ¿Cómo da y recibe amor? ¿Qué necesita sentir para abrirse?
+- ${name2}: Venus en ${venus2?.degreeStr ?? 'no disponible'}, Marte en ${mars2?.degreeStr ?? 'no disponible'}.
+  ¿Cómo da y recibe amor? ¿Qué necesita sentir para abrirse?
+- ¿Hablan el mismo idioma afectivo o cada uno ama de manera diferente? Si la diferencia existe, ¿cómo pueden traducirse?
+- La atracción física y emocional: qué los acerca, qué los enciende, qué los sostiene.
+
+---
+
+## VII. La Capa Kármica — Nodos y el Sanador Interior
+
+Esta sección es sobre el propósito más profundo de la relación.
+Analizá los Nodos Lunares de ambas personas en relación entre sí:
+- ¿El Nodo Norte de uno cae cerca de planetas importantes del otro?
+- ¿Qué vienen a aprender, sanar o completar juntos?
+Quirón, el archétipo del Sanador Herido, transita actualmente por ${chiron?.posStr ?? 'Aries'}.
+¿Qué tipo de herida o sanación activa este tránsito en la dinámica de esta pareja?
+¿Qué herida personal de cada uno puede sanar (o reabrir) en este vínculo?
+
+---
+
+## VIII. El Momento que Viven — Cartas Progresadas
+
+Las progresiones secundarias muestran qué está evolucionando AHORA en cada persona.
+${name1}: describí su Sol y Luna progresados. ¿En qué fase de vida se encuentra? ¿Cómo afecta esto a la relación?
+${name2}: describí su Sol y Luna progresados. ¿En qué fase de vida se encuentra? ¿Cómo afecta esto a la relación?
+¿Las progresiones de ambos están alineadas o van en direcciones distintas?
+
+---
+
+## IX. Lo que el Cielo Dice Hoy — Tránsitos sobre la Unión
+
+Los planetas lentos en tránsito sobre la carta compuesta revelan lo que esta relación está atravesando AHORA.
+${transitAspects.length > 0
+  ? `Hay tránsitos activos sobre la carta compuesta que describí a continuación. Interpretá cada uno: ¿qué tarea colectiva le impone el momento actual a esta pareja?`
+  : `No hay tránsitos lentos exactos sobre la carta compuesta en este momento, pero hay un clima astrológico general que afecta a todas las relaciones.`}
+Conectá esto con lo que mostraron las progresiones: ¿el cielo confirma o tensiona lo que cada persona está viviendo internamente?
+
+---
+
+## X. El Hilo que Todo lo Une — Síntesis Multidimensional
+
+Esta es la sección más importante. No resumas las secciones anteriores — sintetizá.
+Seguí este hilo conductor:
+1. **El alma** (carta dracónica): ¿para qué se encontraron a nivel profundo?
+2. **La danza** (sinastría y Davison): ¿cómo interactúan sus energías en la práctica?
+3. **El ahora** (progresiones y tránsitos): ¿qué está transformando esta relación en este momento?
+4. **La acción**: ¿qué una cosa concreta puede hacer cada persona para honrar este vínculo?
+Si hay temas de "DESTINO INEVITABLE", integrándolos aquí como el eje vertebrador de todo.
+
+---
+
+## XI. Orientación Concreta para Hoy
+
+IMPORTANTE: Esta sección NO es síntesis de lo anterior — es orientación práctica nueva.
 ${personalContext
-  ? `El usuario compartió este contexto sobre la relación: "${personalContext}"
-
-Redactá 2 o 3 párrafos de orientación concreta y honesta conectando lo que muestra la sinastría con esta situación real. Que sea accionable, sin rodeos y sin vacíos. PRIORITARIO: Esta sección debe completarse íntegramente.`
-  : `Redactá 2 párrafos de orientación práctica para ${name1} y ${name2}: qué actitud o acción concreta les pide esta sinastría en este momento de su relación. Que sea directo y útil, no solo poético.`
-}
+  ? `El contexto compartido sobre la relación: "${personalContext}"
+Redactá 2 o 3 párrafos de orientación concreta y honesta conectando lo que muestran las cartas con esta situación real. Que sea accionable, sin rodeos y empático.`
+  : `Redactá 2 párrafos de orientación práctica para ${name1} y ${name2}: qué actitud o acción concreta les pide este análisis multidimensional en este momento de su relación. Cerrá con una frase que los invite a elegir conscientemente, recordándoles que el cielo muestra tendencias pero cada uno decide.`}
 
 ---`.trim();
 

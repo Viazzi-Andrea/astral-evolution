@@ -136,14 +136,14 @@ export function BirthDataForm({ onSubmit, isLoading = false, showPartnerFields =
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nombre Completo *</Label>
+            <Label htmlFor="name">Tu Nombre *</Label>
             <Input
               id="name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
               className="bg-white/5 border-white/10 text-white"
-              placeholder="Juan Pérez"
+              placeholder="Juan"
             />
           </div>
 
@@ -241,7 +241,7 @@ export function BirthDataForm({ onSubmit, isLoading = false, showPartnerFields =
                 onChange={(e) => setPartnerData({ ...partnerData, name: e.target.value })}
                 required={showPartnerFields}
                 className="bg-white/5 border-white/10 text-white"
-                placeholder="María García"
+                placeholder="María"
               />
             </div>
 
@@ -269,6 +269,7 @@ export function BirthDataForm({ onSubmit, isLoading = false, showPartnerFields =
                 required={showPartnerFields}
                 className="bg-white/5 border-white/10 text-white"
               />
+              <p className="text-xs text-gray-400">Si no sabés la hora, poné 00:00. Se calculará todo excepto el Ascendente y las casas astrológicas.</p>
             </div>
 
             <div className="space-y-2">
@@ -329,7 +330,7 @@ export function BirthDataForm({ onSubmit, isLoading = false, showPartnerFields =
       </Button>
 
       <p className="text-xs text-gray-400 text-center">
-        Tu interpretación astral completa llegará a tu correo electrónico en 10-30 minutos tras confirmar el pago.
+        Tu interpretación astral completa llegará a tu correo electrónico en pocos minutos tras confirmar el pago.
       </p>
       <p className="text-xs text-gray-500 text-center">
         Al continuar, aceptas nuestros términos de servicio y política de privacidad.
