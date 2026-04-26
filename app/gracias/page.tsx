@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Sparkles, CheckCircle, Clock, Mail, RefreshCw } from 'lucide-react';
+import { Sparkles, CheckCircle, Clock, Mail, RefreshCw, LayoutDashboard } from 'lucide-react';
+import Link from 'next/link';
 
 type ReportStatus = 'pending' | 'generating' | 'completed' | 'failed' | 'not_found' | 'loading';
 
@@ -155,9 +156,22 @@ export default function GraciasPage() {
           )}
 
           {reportStatus === 'completed' && (
-            <div className="flex items-center gap-3 text-green-400">
-              <CheckCircle className="w-5 h-5" />
-              <span>¡Tu reporte fue generado exitosamente!</span>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 text-green-400">
+                <CheckCircle className="w-5 h-5" />
+                <span>¡Tu reporte fue generado exitosamente!</span>
+              </div>
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-medium text-white transition-all"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.5), rgba(59, 130, 246, 0.5))',
+                  border: '1px solid rgba(16, 185, 129, 0.5)',
+                }}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                Ver mi reporte en el Dashboard
+              </Link>
             </div>
           )}
 
@@ -202,17 +216,27 @@ export default function GraciasPage() {
           </div>
         </div>
 
-        <button
-          onClick={() => (window.location.href = '/')}
-          className="px-8 py-3 rounded-full font-medium transition-all duration-300"
-          style={{
-            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.4), rgba(59, 130, 246, 0.4))',
-            border: '1px solid rgba(139, 92, 246, 0.5)',
-            color: 'white',
-          }}
-        >
-          Volver al inicio ✨
-        </button>
+        <div className="flex flex-wrap gap-4 justify-center">
+          <Link
+            href="/dashboard"
+            className="px-8 py-3 rounded-full font-medium transition-all duration-300 inline-flex items-center gap-2"
+            style={{
+              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.4), rgba(59, 130, 246, 0.4))',
+              border: '1px solid rgba(139, 92, 246, 0.5)',
+              color: 'white',
+            }}
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            Ir al Dashboard
+          </Link>
+          <Link
+            href="/"
+            className="px-8 py-3 rounded-full font-medium text-gray-400 hover:text-white transition-all duration-300"
+            style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+          >
+            Volver al inicio
+          </Link>
+        </div>
       </div>
     </main>
   );

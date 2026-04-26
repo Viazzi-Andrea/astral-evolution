@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader as Loader2, RefreshCw, CircleCheck as CheckCircle2, Clock, Circle as XCircle, Send, LogIn } from 'lucide-react';
+import { Loader as Loader2, RefreshCw, CircleCheck as CheckCircle2, Clock, Circle as XCircle, Send, LogIn, Wifi, WifiOff } from 'lucide-react';
 
 interface Report {
   id:             string;
@@ -36,6 +36,19 @@ export default function AdminTestPage() {
   const [adminSecret, setAdminSecret]     = useState('');
   const [secretInput, setSecretInput]     = useState('');
   const [actionResult, setActionResult]   = useState<string | null>(null);
+  const [health, setHealth]               = useState<any>(null);
+  const [healthLoading, setHealthLoading] = useState(false);
+
+  const fetchHealth = useCallback(async (secret: string) => {
+    setHealthLoading(true);
+    try {
+      const res = await fetch('/api/admin/api-health', {
+        headers: { 'x-admin-secret': secret },
+      });
+      if (res.ok) setHealth(await res.json());
+    } catch {}
+    finally { setHealthLoading(false); }
+  }, []);
 
   const fetchReports = useCallback(async (secret: string, statusFilter: StatusFilter) => {
     setLoading(true);
@@ -68,9 +81,11 @@ export default function AdminTestPage() {
   useEffect(() => {
     if (!adminSecret) return;
     fetchReports(adminSecret, filter);
+    fetchHealth(adminSecret);
     const interval = setInterval(() => fetchReports(adminSecret, filter), 30000);
-    return () => clearInterval(interval);
-  }, [adminSecret, filter, fetchReports]);
+    const healthInterval = setInterval(() => fetchHealth(adminSecret), 120000);
+    return () => { clearInterval(interval); clearInterval(healthInterval); };
+  }, [adminSecret, filter, fetchReports, fetchHealth]);
 
   const handleLogin = () => {
     if (!secretInput.trim()) return;
@@ -191,6 +206,44 @@ export default function AdminTestPage() {
             📧 {unsentCount} reporte{unsentCount > 1 ? 's' : ''} completado{unsentCount > 1 ? 's' : ''} sin email enviado
           </div>
         )}
+
+        {/* Salud de APIs */}
+        <div className="mb-4 p-3 bg-white/5 border border-white/10 rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Estado de APIs</span>
+            <button
+              onClick={() => fetchHealth(adminSecret)}
+              disabled={healthLoading}
+              className="text-xs text-gray-500 hover:text-white transition-colors"
+            >
+              {healthLoading ? '...' : 'Actualizar'}
+            </button>
+          </div>
+          {health ? (
+            <div className="flex flex-wrap gap-3">
+              {Object.entries(health.providers as Record<string, { ok: boolean; latencyMs: number; detail: string }>).map(([name, info]) => (
+                <div key={name} className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border ${
+                  info.ok
+                    ? 'bg-green-500/10 border-green-500/30 text-green-300'
+                    : 'bg-red-500/10 border-red-500/30 text-red-300'
+                }`}>
+                  {info.ok
+                    ? <Wifi className="w-3 h-3" />
+                    : <WifiOff className="w-3 h-3" />
+                  }
+                  <span className="capitalize">{name}</span>
+                  {info.ok && <span className="text-gray-500">{info.latencyMs}ms</span>}
+                  {!info.ok && <span className="text-red-400 truncate max-w-[150px]" title={info.detail}>{info.detail.slice(0, 30)}</span>}
+                </div>
+              ))}
+              <span className="text-xs text-gray-600 self-center">
+                {new Date(health.checkedAt).toLocaleTimeString('es-ES')}
+              </span>
+            </div>
+          ) : (
+            <span className="text-xs text-gray-600">{healthLoading ? 'Verificando...' : 'No disponible'}</span>
+          )}
+        </div>
 
         {/* Filtros */}
         <div className="flex gap-2 mb-4 flex-wrap">
