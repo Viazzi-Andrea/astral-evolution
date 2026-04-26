@@ -465,14 +465,20 @@ ${chiron ? `Quirón transitando: ${chiron.posStr} — temas de sanación activos
 
 ---
 
+${personalContext ? `⚠️ CONTEXTO REAL DE LA RELACIÓN — LEER ANTES DE INTERPRETAR CUALQUIER SECCIÓN:
+"${personalContext}"
+Este contexto es DETERMINANTE para todo el análisis. Debés tenerlo presente desde la sección I hasta la XI.
+NUNCA interpretés las cartas como si existiera una relación activa o un futuro compartido si el contexto indica lo contrario.
+Las progresiones, tránsitos y síntesis deben interpretarse desde la realidad actual de cada persona, no desde un ideal.
+` : ''}
 TAREA: Genera el "Especial Parejas — Análisis Multidimensional" para ${name1} y ${name2}.
 Extensión total: 2500–3000 palabras. Profundidad real en cada sección.
 PROHIBIDO: No uses "él" ni "ella" — usá siempre los nombres directamente.
 PRIORIDAD DE INTERPRETACIÓN:
 1. Los aspectos partiles y los temas de "DESTINO INEVITABLE" son los más importantes.
 2. La carta dracónica revela el propósito del alma — úsala para la capa kármica.
-3. La carta progresada revela lo que está evolucionando AHORA en cada persona.
-4. Los tránsitos sobre la compuesta revelan lo que la relación está atravesando AHORA.
+3. La carta progresada revela lo que está evolucionando AHORA en cada persona — interpretada según el contexto real.
+4. Los tránsitos sobre la compuesta revelan lo que la conexión entre estas dos personas atraviesa AHORA.
 5. Buscá el hilo conductor entre la dimensión del alma (dracónica) y el momento presente (progresada + tránsitos).
 
 DISTRIBUCIÓN DE ESPACIO (para no truncar el cierre):
@@ -566,42 +572,41 @@ Quirón, el archétipo del Sanador Herido, transita actualmente por ${chiron?.po
 
 ## VIII. El Momento que Viven — Cartas Progresadas
 
-Las progresiones secundarias muestran qué está evolucionando AHORA en cada persona.
-${name1}: describí su Sol y Luna progresados. ¿En qué fase de vida se encuentra? ¿Cómo afecta esto a la relación?
-${name2}: describí su Sol y Luna progresados. ¿En qué fase de vida se encuentra? ¿Cómo afecta esto a la relación?
-¿Las progresiones de ambos están alineadas o van en direcciones distintas?
+Las progresiones secundarias muestran qué está evolucionando AHORA en cada persona individualmente.
+${name1}: describí su Sol y Luna progresados. ¿En qué fase de vida se encuentra en este momento?
+${name2}: describí su Sol y Luna progresados. ¿En qué fase de vida se encuentra en este momento?
+Interpretá estas progresiones según la situación real de cada persona (recordá el contexto indicado al inicio). No asumas que ambos están construyendo algo juntos si el contexto dice lo contrario.
 
 ---
 
-## IX. Lo que el Cielo Dice Hoy — Tránsitos sobre la Unión
+## IX. Lo que el Cielo Dice Hoy — Tránsitos sobre la Conexión
 
-Los planetas lentos en tránsito sobre la carta compuesta revelan lo que esta relación está atravesando AHORA.
+Los planetas lentos en tránsito sobre la carta compuesta revelan qué está activando esta conexión en el plano energético AHORA, independientemente de si hay una relación activa o no.
 ${transitAspects.length > 0
-  ? `Hay tránsitos activos sobre la carta compuesta que describí a continuación. Interpretá cada uno: ¿qué tarea colectiva le impone el momento actual a esta pareja?`
-  : `No hay tránsitos lentos exactos sobre la carta compuesta en este momento, pero hay un clima astrológico general que afecta a todas las relaciones.`}
-Conectá esto con lo que mostraron las progresiones: ¿el cielo confirma o tensiona lo que cada persona está viviendo internamente?
+  ? `Hay tránsitos activos. Interpretá cada uno en función del contexto real: ¿qué le está pidiendo el cielo a cada persona en relación con este vínculo?`
+  : `No hay tránsitos lentos exactos sobre la carta compuesta en este momento, pero hay un clima astrológico general que afecta esta conexión.`}
+Conectá con las progresiones: ¿el cielo confirma o tensiona lo que cada persona está viviendo internamente ahora mismo?
 
 ---
 
 ## X. El Hilo que Todo lo Une — Síntesis Multidimensional
 
 Esta es la sección más importante. No resumas las secciones anteriores — sintetizá.
-Seguí este hilo conductor:
+Seguí este hilo conductor, siempre anclado en el contexto real:
 1. **El alma** (carta dracónica): ¿para qué se encontraron a nivel profundo?
 2. **La danza** (sinastría y Davison): ¿cómo interactúan sus energías en la práctica?
-3. **El ahora** (progresiones y tránsitos): ¿qué está transformando esta relación en este momento?
-4. **La acción**: ¿qué una cosa concreta puede hacer cada persona para honrar este vínculo?
-Si hay temas de "DESTINO INEVITABLE", integrándolos aquí como el eje vertebrador de todo.
+3. **El ahora** (progresiones y tránsitos): ¿qué está transformando a cada persona individualmente en este momento?
+4. **La acción**: ¿qué puede hacer cada persona, desde donde está hoy, para honrar lo que este vínculo les enseñó?
+Si hay temas de "DESTINO INEVITABLE", integrálos como eje vertebrador — pero sin ignorar la realidad actual.
 
 ---
 
 ## XI. Orientación Concreta para Hoy
 
-IMPORTANTE: Esta sección NO es síntesis de lo anterior — es orientación práctica nueva.
+IMPORTANTE: Esta sección NO es síntesis de lo anterior — es orientación práctica nueva, completamente anclada en el contexto real que se indicó al inicio.
 ${personalContext
-  ? `El contexto compartido sobre la relación: "${personalContext}"
-Redactá 2 o 3 párrafos de orientación concreta y honesta conectando lo que muestran las cartas con esta situación real. Que sea accionable, sin rodeos y empático.`
-  : `Redactá 2 párrafos de orientación práctica para ${name1} y ${name2}: qué actitud o acción concreta les pide este análisis multidimensional en este momento de su relación. Cerrá con una frase que los invite a elegir conscientemente, recordándoles que el cielo muestra tendencias pero cada uno decide.`}
+  ? `Redactá 2 o 3 párrafos de orientación concreta y honesta para ${name1} específicamente (es quien lee este informe). Conectá lo que muestran las cartas con la situación real. Que sea accionable, directo y empático. No romantices lo que no es romántico; no evites lo que es incómodo.`
+  : `Redactá 2 párrafos de orientación práctica para ${name1} y ${name2}: qué actitud o acción concreta les pide este análisis en este momento. Cerrá recordándoles que el cielo muestra tendencias, pero cada persona elige.`}
 
 ---`.trim();
 
