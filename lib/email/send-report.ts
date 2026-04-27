@@ -62,7 +62,19 @@ function buildCards(html: string): string {
 </div>`);
   }
 
-  return cards.join('\n');
+  // Separador ornamental entre tarjetas
+  const DIVIDER = `
+<div style="text-align:center;padding:4px 0 8px;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+    <tr>
+      <td style="width:40%;border-bottom:1px solid #ddd6fe;vertical-align:middle;"></td>
+      <td style="padding:0 14px;white-space:nowrap;font-size:13px;color:#c9a96e;font-family:Georgia,serif;vertical-align:middle;">✦</td>
+      <td style="width:40%;border-bottom:1px solid #ddd6fe;vertical-align:middle;"></td>
+    </tr>
+  </table>
+</div>`;
+
+  return cards.join(DIVIDER);
 }
 
 // ─── Email completo ───────────────────────────────────────────────────────────
@@ -209,7 +221,7 @@ export async function sendReportEmail({
 
   await sgMail.send({
     to,
-    from: { email: 'lecturas@astralevolution.com', name: 'Astral Evolution' },
+    from: { email: 'lecturas@astralevolution.com', name: 'Tu Equipo de Análisis · Astral Evolution' },
     subject: `✦ Tu ${productName} está listo, ${userName}`,
     html,
   });
